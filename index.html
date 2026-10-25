@@ -398,7 +398,7 @@ function customerForm(id){
    '<label>使用 / 有兴趣的产品</label><input id="c_prod" value="'+esc(c.products)+'">'+
    '<label>下次跟进日期</label><input id="c_fu" type="date" value="'+esc(c.follow_up||'')+'">'+
    '<label>备注</label><textarea id="c_rem">'+esc(c.remarks)+'</textarea>'+
-   '<label>名片照片</label><div id="cardPreview"></div><input id="c_card" type="file" accept="image/*" capture="environment" onchange="uploadCard(this.files[0])">'+ownerSel+
+   '<label>名片照片</label><div id="cardPreview"></div><input id="c_card" type="file" accept="image/*" onchange="uploadCard(this.files[0])"><p class="muted" style="margin-top:4px">点击后可以选择拍照，也可以从手机相册里选取已有的照片。</p>'+ownerSel+
    '<div class="row"><button class="btn" onclick="saveCustomer('+(id?'\''+esc(id)+'\'':'null')+')">保存</button><button class="btn secondary" onclick="renderCustomers()">取消</button>'+
    (id&&admin?'<button class="btn danger" onclick="deleteCustomer(\''+esc(id)+'\')">删除客户</button>':'')+'</div></div>';
   renderCardPreview();
@@ -431,7 +431,7 @@ function visitItem(v,showCustomer){
   const c=D.customers.find(x=>x.id===v.customer_id);
   return '<div class="item"><b>'+esc(showCustomer?(c?c.name:'（已删除的客户）'):fmt(v.created_at))+'</b>'+
     '<br><small class="muted">'+(showCustomer?fmt(v.created_at)+' · ':'')+esc(nameOf(v.sales_id))+' · 见到老板：'+(v.met_owner?'是':'否')+(v.lat!=null?' · '+mapLink(v.lat,v.lng):'')+'</small>'+
-    (v.need?'<br>需求：'+esc(v.need):'')+(v.feedback?'<br>反馈：'+esc(v.feedback):'')+(v.competitor?'<br>竞品/价格：'+esc(v.competitor):'')+
+    (v.products_interest?'<br>产品：'+esc(v.products_interest):'')+(v.need?'<br>需求：'+esc(v.need):'')+(v.feedback?'<br>反馈：'+esc(v.feedback):'')+(v.competitor?'<br>竞品/价格：'+esc(v.competitor):'')+
     '<br>潜在订单：<b>'+money(v.potential_order)+'</b>'+(v.next_follow_up?' · 下次跟进：'+esc(v.next_follow_up):'')+'</div>';
 }
 let vDate='';
@@ -457,12 +457,15 @@ function visitPicker(){
   showSection('visits');
   $('visits').innerHTML='<h2>选择要拜访的客户</h2><div class="card"><input id="pq" placeholder="搜索客户" oninput="filterPicker()"><div id="plist">'+pickerList('')+'</div><button class="btn secondary" style="margin-top:10px" onclick="renderVisits()">返回</button></div>';
 }
+const PRODUCT_OPTIONS=['12V','21V Cordless','Corded','Measuring Tools','Vacuum','Water Jet','Power Bank','Grease','Measuring Tape','Yendare Product','ADX Cutting Disc','Offer Item'];
 function visitForm(cid){
   showSection('visits');
   const c=D.customers.find(x=>x.id===cid);
   if(!c){renderVisits();return}
+  const prodBoxes=PRODUCT_OPTIONS.map(p=>'<label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:400;width:auto"><input type="checkbox" class="vprod" value="'+esc(p)+'" style="width:auto;margin:0"> '+esc(p)+'</label>').join('');
   $('visits').innerHTML='<h2>📝 拜访报告</h2><div class="card"><div class="item"><b>'+esc(c.name)+'</b> <span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+'</span></div>'+
    '<label style="margin-top:10px">见到老板？</label><select id="v_owner"><option value="1">是</option><option value="0">否</option></select>'+
+   '<label>产品 / 促销项目（可多选）</label><div class="row" style="flex-wrap:wrap;row-gap:8px;column-gap:16px;margin-bottom:10px">'+prodBoxes+'</div>'+
    '<label>客户需求</label><textarea id="v_need"></textarea>'+
    '<label>客户反馈</label><textarea id="v_fb"></textarea>'+
    '<label>竞品 / 价格</label><input id="v_comp" value="'+esc(c.competitor||'')+'">'+
@@ -475,8 +478,9 @@ async function saveVisit(cid){
   const pot=Number($('v_pot').value||0);
   if(!(pot>=0)){toast('潜在订单金额不正确');return}
   const wantGps=$('v_gps').checked;
+  const prods=Array.prototype.slice.call(document.querySelectorAll('.vprod')).filter(el=>el.checked).map(el=>el.value).join(', ');
   const base={customer_id:cid,sales_id:me.id,met_owner:$('v_owner').value==='1',need:$('v_need').value.trim(),feedback:$('v_fb').value.trim(),
-    competitor:$('v_comp').value.trim(),potential_order:pot,next_follow_up:$('v_fu').value||null};
+    competitor:$('v_comp').value.trim(),potential_order:pot,next_follow_up:$('v_fu').value||null,products_interest:prods||null};
   await guard(async()=>{
     let gpsFailed=false;
     if(wantGps){
@@ -507,10 +511,33 @@ function renderAdmin(){
     return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.grade)+'</td><td><select onchange="reassign(\''+esc(c.id)+'\',this.value)">'+opts.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===c.owner_id?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></td><td>'+esc(c.follow_up||'-')+'</td><td><button class="btn secondary" style="padding:6px 10px" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button></td></tr>';
   }).join('');
   $('admin').innerHTML='<h2>⚙️ Admin 后台</h2>'+
-   '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th></tr>'+staff+'</table></div>'+
-   '<p class="muted">新增 / 停用 / 重置密码，请到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
+   '<div class="card"><h3>新增账号</h3>'+
+   '<label>账号名（登录用，仅英文/数字/下划线）</label><input id="nu_username" placeholder="例如 sales06" autocapitalize="none" autocorrect="off" spellcheck="false">'+
+   '<label>姓名</label><input id="nu_name" placeholder="例如 Sales 06">'+
+   '<label>角色</label><select id="nu_role"><option value="sales">Sales</option><option value="admin">Admin</option></select>'+
+   '<label>初始密码（至少 8 位）</label><input id="nu_pass" type="password" placeholder="创建后请让本人登录就改密码">'+
+   '<button class="btn full" onclick="createUserAccount()">创建账号</button>'+
+   '<p class="muted">创建后把账号名和这个初始密码告诉对方，并请他登录后立刻在首页修改密码。停用账号或重置密码，仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
+   '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th></tr>'+staff+'</table></div></div>'+
    '<div class="card"><h3>全部客户与负责人（可直接重新分配）</h3><div class="table"><table><tr><th>客户</th><th>等级</th><th>所属 Sales</th><th>跟进</th><th></th></tr>'+(custRows||'<tr><td colspan="5" class="muted">暂无客户</td></tr>')+'</table></div></div>'+
    '<div class="card"><h3>数据备份</h3><button class="btn secondary" onclick="backup()">导出 JSON 备份</button><p class="muted">导出当前可见的全部客户、拜访、打卡（最近 1000 条）记录。</p></div>';
+}
+async function createUserAccount(){
+  const username=($('nu_username').value||'').trim().toLowerCase();
+  const name=($('nu_name').value||'').trim();
+  const role=$('nu_role').value;
+  const pass=$('nu_pass').value;
+  if(!/^[a-z0-9_]{3,20}$/.test(username)){toast('账号名只能用小写字母、数字、下划线，3-20 位');return}
+  if(!name){toast('请填写姓名');return}
+  if(pass.length<8){toast('密码至少 8 位');return}
+  await guard(async()=>{
+    const {data,error}=await sb.functions.invoke('admin-create-user',{body:{username,name,role,password:pass}});
+    if(error)throw error;
+    if(!data||!data.ok){toast((data&&data.error)||'创建失败');return}
+    $('nu_username').value='';$('nu_name').value='';$('nu_pass').value='';$('nu_role').value='sales';
+    await loadAll();renderAdmin();
+    toast(data.warning?('账号已创建，但 '+data.warning):'账号已创建：'+username);
+  });
 }
 async function reassign(cid,oid){
   await guard(async()=>{
