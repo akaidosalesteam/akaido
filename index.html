@@ -120,6 +120,8 @@ const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime(
 const isToday=x=>new Date(x).getTime()>=startOfToday();
 const isAdmin=()=>!!me&&me.role==='admin';
 const nameOf=id=>{const p=D.profiles.find(x=>x.id===id);return p?p.name:'-'};
+// 用于把文字安全地塞进 onclick="fn('...')" 这种单引号 JS 字符串里：先转义反斜杠和单引号，再做HTML转义
+const jsAttr=s=>esc(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
 const custName=id=>{if(!id)return '';const c=D.customers.find(x=>x.id===id);return c?c.name:'（客户已删除）'};
 const salesList=()=>D.profiles.filter(p=>p.role==='sales'&&p.active);
 const mapLink=(lat,lng)=>(lat==null||lng==null)?'-':'<a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+Number(lat)+','+Number(lng)+'">地图</a>';
@@ -501,10 +503,14 @@ async function saveVisit(cid){
 /* ========== 管理员后台 ========== */
 function renderAdmin(){
   if(!isAdmin()){$('admin').innerHTML='<h2>⚙️ 后台</h2><div class="card">只有管理员可以使用后台。</div>';return}
-  const sales=salesList();
-  const staff=sales.map(u=>{
+  const allSales=D.profiles.filter(p=>p.role==='sales').slice().sort((a,b)=>a.username.localeCompare(b.username));
+  const staff=allSales.map(u=>{
     const ins=D.attendance.some(a=>a.user_id===u.id&&a.type==='IN'&&isToday(a.created_at));
-    return '<tr><td>'+esc(u.name)+'</td><td>'+esc(u.username)+'</td><td>'+(ins?'✅':'—')+'</td><td>'+D.customers.filter(c=>c.owner_id===u.id).length+'</td><td>'+D.visits.filter(v=>v.sales_id===u.id).length+'</td></tr>';
+    return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td><td>'+(ins?'✅':'—')+'</td><td>'+D.customers.filter(c=>c.owner_id===u.id).length+'</td><td>'+D.visits.filter(v=>v.sales_id===u.id).length+'</td>'+
+      '<td><div class="row" style="gap:6px"><button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>'+
+      (u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>'
+               :'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>')+
+      '</div></td></tr>';
   }).join('');
   const custRows=D.customers.map(c=>{
     const opts=D.profiles.filter(p=>(p.role==='sales'&&p.active)||p.id===c.owner_id);
@@ -518,9 +524,31 @@ function renderAdmin(){
    '<label>初始密码（至少 8 位）</label><input id="nu_pass" type="password" placeholder="创建后请让本人登录就改密码">'+
    '<button class="btn full" onclick="createUserAccount()">创建账号</button>'+
    '<p class="muted">创建后把账号名和这个初始密码告诉对方，并请他登录后立刻在首页修改密码。停用账号或重置密码，仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
-   '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th></tr>'+staff+'</table></div></div>'+
+   '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th><th>操作</th></tr>'+(staff||'<tr><td colspan="6" class="muted">暂无 Sales</td></tr>')+'</table></div><p class="muted">停用后这个人无法登录，但历史的客户、拜访、打卡记录都会保留，随时可以重新启用。重置密码仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
    '<div class="card"><h3>全部客户与负责人（可直接重新分配）</h3><div class="table"><table><tr><th>客户</th><th>等级</th><th>所属 Sales</th><th>跟进</th><th></th></tr>'+(custRows||'<tr><td colspan="5" class="muted">暂无客户</td></tr>')+'</table></div></div>'+
    '<div class="card"><h3>数据备份</h3><button class="btn secondary" onclick="backup()">导出 JSON 备份</button><p class="muted">导出当前可见的全部客户、拜访、打卡（最近 1000 条）记录。</p></div>';
+}
+async function renameSales(id,currentName){
+  const input=prompt('输入新的姓名',currentName);
+  if(input===null)return;
+  const name=input.trim();
+  if(!name){toast('姓名不能为空');return}
+  await guard(async()=>{
+    const r=await sb.from('profiles').update({name}).eq('id',id);
+    if(r.error)throw r.error;
+    await loadAll();renderAdmin();
+    toast('姓名已更新');
+  });
+}
+async function toggleSalesActive(id,isActive){
+  const verb=isActive?'停用':'启用';
+  if(!confirm('确定要'+verb+'这个账号吗？'+(isActive?'停用后对方将无法登录，但他的客户、拜访、打卡记录都会保留，可随时重新启用。':'')))return;
+  await guard(async()=>{
+    const r=await sb.from('profiles').update({active:!isActive}).eq('id',id);
+    if(r.error)throw r.error;
+    await loadAll();renderAdmin();
+    toast('已'+verb);
+  });
 }
 async function createUserAccount(){
   const username=($('nu_username').value||'').trim().toLowerCase();
