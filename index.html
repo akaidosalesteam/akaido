@@ -326,7 +326,7 @@ function custList(q){
   return list.map(c=>{
     const overdue=c.follow_up&&c.follow_up<=today;
     return '<div class="item"><div class="row between"><b>'+esc(c.name)+'</b><div class="row" style="gap:6px;width:auto">'+((c.kow_hock||'No')==='Yes'?'<span class="badge" style="background:#fde8e8;color:#b42318">Kow Hock</span>':'')+'<span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="badge" style="background:#e8eef8;color:#123B7A">'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天')+'</span><span class="badge" style="background:#eee;color:#444">'+esc(c.payment_method||'Cheque')+'</span></div></div>'+
-      '<small>'+esc(c.contact||'-')+' · '+esc(c.phone||'-')+(c.office_no?' · Office '+esc(c.office_no):'')+'</small><br><small>'+esc(c.address||'-')+'</small>'+
+      '<small>'+esc(c.contact||'-')+' · '+esc(c.phone||'-')+(c.office_no?' · 未获取电话号码：'+esc(c.office_no):'')+'</small><br><small>'+esc(c.address||'-')+'</small>'+
       '<div class="muted" style="margin-top:4px">'+(admin?'Sales：'+esc(nameOf(c.owner_id))+' · ':'')+'下次跟进：<span class="'+(overdue?'red':'')+'">'+esc(c.follow_up||'-')+'</span> · 潜在订单 '+money(pm.get(c.id)||0)+(c.card_photo?(cardSrc(c.card_photo)?' · <a target="_blank" rel="noopener" href="'+esc(cardSrc(c.card_photo))+'">名片</a>':' · 名片（加载中，点刷新）'):'')+'</div>'+
       '<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="showCustomer(\''+esc(c.id)+'\')">详情/历史</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button><button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button></div></div>';
   }).join('');
@@ -344,7 +344,7 @@ function showCustomer(id){
   const pm=potMap();
   $('customers').innerHTML='<h2>👥 '+esc(c.name)+'</h2>'+
    '<div class="card"><div class="row between"><span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="muted">'+(isAdmin()?'Sales：'+esc(nameOf(c.owner_id)):'')+'</span></div>'+
-   '<p>联系人：'+esc(c.contact||'-')+'<br>电话：'+esc(c.phone||'-')+'<br>Office No：'+esc(c.office_no||'-')+'<br>地址：'+esc(c.address||'-')+'<br>账期：'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+' 天')+'<br>付款方式：'+esc(c.payment_method||'Cheque')+'<br>Kow Hock / Franchise：'+esc(c.kow_hock||'No')+'<br>竞品：'+esc(c.competitor||'-')+'<br>产品：'+esc(c.products||'-')+'<br>下次跟进：'+esc(c.follow_up||'-')+'<br>潜在订单：'+money(pm.get(c.id)||0)+'<br>备注：'+esc(c.remarks||'-')+'</p>'+
+   '<p>联系人：'+esc(c.contact||'-')+'<br>电话：'+esc(c.phone||'-')+'<br>未获取电话号码：'+esc(c.office_no||'-')+'<br>地址：'+esc(c.address||'-')+'<br>账期：'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+' 天')+'<br>付款方式：'+esc(c.payment_method||'Cheque')+'<br>Kow Hock / Franchise：'+esc(c.kow_hock||'No')+'<br>竞品：'+esc(c.competitor||'-')+'<br>产品：'+esc(c.products||'-')+'<br>下次跟进：'+esc(c.follow_up||'-')+'<br>潜在订单：'+money(pm.get(c.id)||0)+'<br>备注：'+esc(c.remarks||'-')+'</p>'+
    (c.card_photo?(cardSrc(c.card_photo)?'<img src="'+esc(cardSrc(c.card_photo))+'" alt="名片" style="max-width:240px;width:100%;border-radius:10px;border:1px solid #e5e7eb;display:block;margin-top:4px">':'<p class="muted">名片图片加载中，请点右上角「↻ 刷新」</p>'):'')+
    '<div class="row"><button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">＋ 新增拜访</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button><button class="btn secondary" onclick="renderCustomers()">返回列表</button></div></div>'+
    '<div class="card"><h3>拜访历史（'+vs.length+'）</h3>'+(vs.length?vs.map(v=>visitItem(v,false)).join(''):'<div class="muted">还没有拜访记录</div>')+'</div>';
@@ -396,8 +396,8 @@ function customerForm(id){
   $('customers').innerHTML='<h2>👥 '+(id?'编辑':'新增')+'客户</h2><div class="card">'+
    '<label>客户名称 *</label><input id="c_name" value="'+esc(c.name)+'">'+
    '<label>联系人 / 老板</label><input id="c_contact" value="'+esc(c.contact)+'">'+
-   '<label>电话</label><input id="c_phone" type="tel" value="'+esc(c.phone)+'">'+
-   '<label>Office No（选填，公司没有可留空）</label><input id="c_office" type="tel" value="'+esc(c.office_no)+'">'+
+   '<label>电话（与下面二选一）</label><input id="c_phone" type="tel" value="'+esc(c.phone)+'">'+
+   '<label>未获取电话号码（没有电话时填这里）</label><input id="c_office" type="text" placeholder="选填，例如：只有公司座机 03-12345678" value="'+esc(c.office_no)+'">'+
    '<label>客户等级</label><select id="c_grade">'+['A','B','C'].map(g=>'<option'+(c.grade===g?' selected':'')+'>'+g+'</option>').join('')+'</select>'+
    '<label>账期 Term</label><select id="c_term">'+PAYMENT_TERMS.map(t=>'<option value="'+esc(t)+'"'+((c.payment_term||'COD')===t?' selected':'')+'>'+esc(t==='COD'?'COD':t+' 天')+'</option>').join('')+'</select>'+
    '<label>付款方式 Payment</label><select id="c_pay">'+PAYMENT_METHODS.map(p=>'<option value="'+esc(p)+'"'+((c.payment_method||'Cheque')===p?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select>'+
@@ -415,6 +415,7 @@ function customerForm(id){
 async function saveCustomer(id){
   const name=$('c_name').value.trim();
   if(!name){toast('请输入客户名称');return}
+  if(!$('c_phone').value.trim()&&!$('c_office').value.trim()){toast('请填写电话，或在「未获取电话号码」栏填写（二选一）');return}
   const row={name:name,contact:$('c_contact').value.trim(),phone:$('c_phone').value.trim(),office_no:$('c_office').value.trim()||null,grade:$('c_grade').value,address:$('c_addr').value.trim(),
     competitor:$('c_comp').value.trim(),products:$('c_prod').value.trim(),remarks:$('c_rem').value.trim(),follow_up:$('c_fu').value||null,card_photo:cardPath,payment_term:$('c_term').value,payment_method:$('c_pay').value,kow_hock:$('c_kh').value};
   if(isAdmin()&&$('c_owner'))row.owner_id=$('c_owner').value;
