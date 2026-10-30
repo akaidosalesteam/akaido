@@ -122,6 +122,7 @@ const ymd=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,
 const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
 const isToday=x=>new Date(x).getTime()>=startOfToday();
 const isAdmin=()=>!!me&&me.role==='admin';
+const isStaff=()=>!!me&&me.role==='staff';   // Staff：只能使用考勤打卡
 const nameOf=id=>{const p=D.profiles.find(x=>x.id===id);return p?p.name:'-'};
 // 用于把文字安全地塞进 onclick="fn('...')" 这种单引号 JS 字符串里：先转义反斜杠和单引号，再做HTML转义
 const jsAttr=s=>esc(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
@@ -168,7 +169,7 @@ async function enter(user){
   $('login').classList.add('hidden');$('app').classList.remove('hidden');
   $('userline').textContent=me.name+' · '+me.role.toUpperCase();
   $('navAdmin').classList.toggle('hidden',!isAdmin());
-  const staff=me.role==='staff';
+  const staff=isStaff();
   document.querySelectorAll('.nav button').forEach(b=>{if(staff&&b.dataset.p!=='hr')b.classList.add('hidden')});
   page(staff?'hr':'dashboard');
 }
@@ -187,6 +188,11 @@ async function loadCardUrls(customers){
   cardUrls=next;
 }
 async function loadAll(){
+  if(isStaff()){   // Staff 不需要销售数据，跳过，避免被数据库权限拦截
+    D={profiles:[me],customers:[],visits:[],attendance:[]};
+    await loadHR();
+    return;
+  }
   const rs=await Promise.all([
     sb.from('profiles').select('*').order('username'),
     sb.from('customers').select('*').order('created_at',{ascending:false}),
@@ -207,6 +213,7 @@ function showSection(p){
   window.scrollTo(0,0);
 }
 function page(p){
+  if(isStaff())p='hr';   // Staff 只能进考勤页
   showSection(p);
   ({dashboard:renderDashboard,checkin:renderCheckin,customers:renderCustomers,visits:renderVisits,admin:renderAdmin,hr:renderHR})[p]();
 }
@@ -607,14 +614,17 @@ const ruleOf=(s,d)=>{if(!s)return null;const w=new Date(d+'T00:00:00Z').getUTCDa
 let H={schedules:[],locations:[],settings:{ot_grace_min:30,ot_unit:'30',late_grace_min:0,enforce_geofence:true},records:[],from:'',err:''},hrTab='mine',hrMonth=klDate(Date.now()).slice(0,7),fEmp='',hrTimer=null,cam=null,camPos=null,camType='';
 async function loadHR(){
   const m=hrMonth,y=+m.slice(0,4),mo=+m.slice(5,7),nxt=mo===12?(y+1)+'-01-01':y+'-'+String(mo+1).padStart(2,'0')+'-01';
+  const errs=[];
+  const pick=(x,def)=>{if(x.error){errs.push(x.error.message||String(x.error));return def}return x.data};
   try{
+    let q=sb.from('hr_clock_records').select('*').gte('work_date',m+'-01').lt('work_date',nxt).order('work_date',{ascending:false}).order('clock_in',{ascending:false}).limit(1000);
+    if(!isAdmin())q=q.eq('user_id',me.id);   // 非 Admin 只取自己的记录
     const r=await Promise.all([sb.from('hr_schedules').select('*').order('created_at'),sb.from('hr_locations').select('*').order('created_at'),sb.from('hr_settings').select('*').eq('id',1).maybeSingle(),
-      sb.from('hr_clock_records').select('*').gte('work_date',m+'-01').lt('work_date',nxt).order('work_date',{ascending:false}).order('clock_in',{ascending:false}).limit(1000),
-      sb.from('hr_clock_records').select('*').eq('user_id',me.id).eq('work_date',klDate(Date.now())).maybeSingle()]);
-    for(const x of r)if(x.error)throw x.error;
-    H={...H,schedules:r[0].data,locations:r[1].data,settings:r[2].data||H.settings,records:r[3].data,today:r[4].data,err:''};
+      q,sb.from('hr_clock_records').select('*').eq('user_id',me.id).eq('work_date',klDate(Date.now())).maybeSingle()]);
+    H={...H,schedules:pick(r[0],[]),locations:pick(r[1],[]),settings:pick(r[2],null)||H.settings,records:pick(r[3],[]),today:pick(r[4],null),err:errs[0]||''};
   }catch(e){H.err=e.message||String(e)}
 }
+
 /* 迟到 / 早退 / OT：规则用打卡当天的快照；休息日工时单独列出，不算 OT */
 function calc(r){
   const o={late:0,early:0,ot:0,rest:0,worked:0,note:''},s=H.settings;
