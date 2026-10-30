@@ -525,6 +525,19 @@ async function saveVisit(cid){
 function renderAdmin(){
   if(!isAdmin()){$('admin').innerHTML='<h2>⚙️ 后台</h2><div class="card">只有管理员可以使用后台。</div>';return}
   const allSales=D.profiles.filter(p=>p.role==='sales').slice().sort((a,b)=>a.username.localeCompare(b.username));
+  const allStaff=D.profiles.filter(p=>p.role==='staff').slice().sort((a,b)=>a.username.localeCompare(b.username));
+  const todayKL=klDate(Date.now());
+  const staffRows=allStaff.map(u=>{
+    const rc=H.records.find(r=>r.user_id===u.id&&r.work_date===todayKL);
+    const sch=H.schedules.find(x=>x.id===u.schedule_id);
+    const days=H.records.filter(r=>r.user_id===u.id&&r.work_date.startsWith(hrMonth)).length;
+    return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td><td>'+esc(u.dept||'-')+'</td><td>'+esc(sch?sch.name:'未设置')+'</td><td>'+(rc?'✅ '+klHM(rc.clock_in)+(rc.clock_out?' - '+klHM(rc.clock_out):''):'—')+'</td><td>'+days+'</td>'+
+      '<td><div class="row" style="gap:6px"><button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>'+
+      '<button class="btn secondary" style="padding:6px 10px" onclick="hrTab=\'rec\';fEmp=\''+esc(u.id)+'\';page(\'hr\')">出勤</button>'+
+      (u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>'
+               :'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>')+
+      '</div></td></tr>';
+  }).join('');
   const staff=allSales.map(u=>{
     const ins=D.attendance.some(a=>a.user_id===u.id&&a.type==='IN'&&isToday(a.created_at));
     return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td><td>'+(ins?'✅':'—')+'</td><td>'+D.customers.filter(c=>c.owner_id===u.id).length+'</td><td>'+D.visits.filter(v=>v.sales_id===u.id).length+'</td>'+
@@ -546,6 +559,7 @@ function renderAdmin(){
    '<button class="btn full" onclick="createUserAccount()">创建账号</button>'+
    '<p class="muted">创建后把账号名和这个初始密码告诉对方，并请他登录后立刻在首页修改密码。停用账号或重置密码，仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
    '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th><th>操作</th></tr>'+(staff||'<tr><td colspan="6" class="muted">暂无 Sales</td></tr>')+'</table></div><p class="muted">停用后这个人无法登录，但历史的客户、拜访、打卡记录都会保留，随时可以重新启用。重置密码仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
+   '<div class="card"><h3>Staff（办公室 / 仓库）管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>部门</th><th>Schedule</th><th>今日打卡</th><th>本月出勤</th><th>操作</th></tr>'+(staffRows||'<tr><td colspan="7" class="muted">暂无 Staff，可在上方「新增账号」选择角色 Staff 创建</td></tr>')+'</table></div><p class="muted">Staff 登录后只能使用考勤打卡。停用后无法登录，历史打卡记录会保留。「出勤」可直接查看此人的考勤明细；部门和 Schedule 到「考勤 → 员工」修改。</p></div>'+
    '<div class="card"><h3>全部客户与负责人（可直接重新分配）</h3><div class="table"><table><tr><th>客户</th><th>等级</th><th>所属 Sales</th><th>跟进</th><th></th></tr>'+(custRows||'<tr><td colspan="5" class="muted">暂无客户</td></tr>')+'</table></div></div>'+
    '<div class="card"><h3>数据备份</h3><button class="btn secondary" onclick="backup()">导出 JSON 备份</button><p class="muted">导出当前可见的全部客户、拜访、打卡（最近 1000 条）记录。</p></div>';
 }
