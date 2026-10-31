@@ -122,7 +122,10 @@ const ymd=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,
 const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
 const isToday=x=>new Date(x).getTime()>=startOfToday();
 const isAdmin=()=>!!me&&me.role==='admin';
-const isStaff=()=>!!me&&me.role==='staff';   // Staff：只能使用考勤打卡
+const isStaff=()=>!!me&&me.role==='staff';   // Staff：默认只能使用考勤打卡
+const staffCust=()=>isStaff()&&me.can_customers===true;   // 管理员给 Staff 开启的「客户」权限
+const allowedPages=()=>isStaff()?(staffCust()?['hr','customers']:['hr']):PAGES;
+let custErr='';
 const nameOf=id=>{const p=D.profiles.find(x=>x.id===id);return p?p.name:'-'};
 // 用于把文字安全地塞进 onclick="fn('...')" 这种单引号 JS 字符串里：先转义反斜杠和单引号，再做HTML转义
 const jsAttr=s=>esc(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
@@ -168,13 +171,18 @@ async function enter(user){
   await loadAll();
   $('login').classList.add('hidden');$('app').classList.remove('hidden');
   $('userline').textContent=me.name+' · '+me.role.toUpperCase();
-  $('navAdmin').classList.toggle('hidden',!isAdmin());
-  const staff=isStaff();
-  document.querySelectorAll('.nav button').forEach(b=>{if(staff&&b.dataset.p!=='hr')b.classList.add('hidden')});
-  page(staff?'hr':'dashboard');
+  applyNav();
+  page(isStaff()?'hr':'dashboard');
+}
+function applyNav(){
+  const allow=isStaff()?allowedPages():null;
+  document.querySelectorAll('.nav button').forEach(b=>{
+    if(b.id==='navAdmin'){b.classList.toggle('hidden',!isAdmin());return}
+    b.classList.toggle('hidden',!!allow&&!allow.includes(b.dataset.p));
+  });
 }
 async function logout(){me=null;try{await sb.auth.signOut()}catch(e){}location.reload()}
-async function refresh(){await guard(async()=>{await loadAll();page(cur);toast('已刷新')})}
+async function refresh(){await guard(async()=>{await loadAll();applyNav();page(cur);toast('已刷新')})}
 
 /* ========== 读取数据（数据库 RLS 已按账号过滤：Sales 只会拿到自己的，Admin 拿到全部） ========== */
 let cardUrls={};
@@ -188,8 +196,16 @@ async function loadCardUrls(customers){
   cardUrls=next;
 }
 async function loadAll(){
-  if(isStaff()){   // Staff 不需要销售数据，跳过，避免被数据库权限拦截
+  if(isStaff()){   // Staff：不读拜访、外勤；只有被开启「客户」权限时才读自己的客户
+    const pr=await sb.from('profiles').select('*').eq('id',me.id).single();   // 重新读取，管理员刚改的权限马上生效
+    if(pr.data)Object.assign(me,pr.data);
     D={profiles:[me],customers:[],visits:[],attendance:[]};
+    custErr='';
+    if(staffCust()){
+      const r=await sb.from('customers').select('*').order('created_at',{ascending:false});
+      if(r.error)custErr=r.error.message||String(r.error);else D.customers=r.data;
+      await loadCardUrls(D.customers);
+    }
     await loadHR();
     return;
   }
@@ -213,7 +229,7 @@ function showSection(p){
   window.scrollTo(0,0);
 }
 function page(p){
-  if(isStaff())p='hr';   // Staff 只能进考勤页
+  if(isStaff()&&!allowedPages().includes(p))p='hr';   // Staff 只能进被允许的页面
   showSection(p);
   ({dashboard:renderDashboard,checkin:renderCheckin,customers:renderCustomers,visits:renderVisits,admin:renderAdmin,hr:renderHR})[p]();
 }
@@ -340,8 +356,8 @@ function custList(q){
     const overdue=c.follow_up&&c.follow_up<=today;
     return '<div class="item"><div class="row between"><b>'+esc(c.name)+'</b><div class="row" style="gap:6px;width:auto">'+((c.kow_hock||'No')==='Yes'?'<span class="badge" style="background:#fde8e8;color:#b42318">Kow Hock</span>':'')+'<span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="badge" style="background:#e8eef8;color:#123B7A">'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天')+'</span><span class="badge" style="background:#eee;color:#444">'+esc(c.payment_method||'Cheque')+'</span></div></div>'+
       '<small>'+esc(c.contact||'-')+' · '+esc(c.phone||'-')+(c.office_no?' · 未获取电话号码：'+esc(c.office_no):'')+'</small><br><small>'+esc(c.address||'-')+'</small>'+
-      '<div class="muted" style="margin-top:4px">'+(admin?'Sales：'+esc(nameOf(c.owner_id))+' · ':'')+'下次跟进：<span class="'+(overdue?'red':'')+'">'+esc(c.follow_up||'-')+'</span> · 潜在订单 '+money(pm.get(c.id)||0)+(c.card_photo?(cardSrc(c.card_photo)?' · <a target="_blank" rel="noopener" href="'+esc(cardSrc(c.card_photo))+'">名片</a>':' · 名片（加载中，点刷新）'):'')+'</div>'+
-      '<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="showCustomer(\''+esc(c.id)+'\')">详情/历史</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button><button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button></div></div>';
+      '<div class="muted" style="margin-top:4px">'+(admin?'负责人：'+esc(nameOf(c.owner_id))+' · ':'')+'下次跟进：<span class="'+(overdue?'red':'')+'">'+esc(c.follow_up||'-')+'</span>'+(isStaff()?'':' · 潜在订单 '+money(pm.get(c.id)||0))+(c.card_photo?(cardSrc(c.card_photo)?' · <a target="_blank" rel="noopener" href="'+esc(cardSrc(c.card_photo))+'">名片</a>':' · 名片（加载中，点刷新）'):'')+'</div>'+
+      '<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="showCustomer(\''+esc(c.id)+'\')">'+(isStaff()?'详情':'详情/历史')+'</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button>'+(isStaff()?'':'<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button>')+'</div></div>';
   }).join('');
 }
 function filterCustomers(){$('clist').innerHTML=custList($('cq').value.trim().toLowerCase())}
@@ -366,8 +382,8 @@ function exportCustomers(){
   toast('已导出 '+list.length+' 位客户');
 }
 function renderCustomers(){
-  $('customers').innerHTML='<h2>👥 客户 CRM</h2><div class="card"><button class="btn full" onclick="customerForm()">＋ 新增客户</button></div>'+
-    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()"><button class="btn secondary full" style="margin-bottom:10px" onclick="exportCustomers()">⬇ 下载客户明细（CSV）</button><div id="clist">'+custList('')+'</div></div>';
+  $('customers').innerHTML='<h2>👥 客户 CRM</h2>'+(custErr?'<div class="banner">客户数据读取失败：'+esc(custErr)+'（请确认已运行 staff-customers.sql）</div>':'')+'<div class="card"><button class="btn full" onclick="customerForm()">＋ 新增客户</button></div>'+
+    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()">'+(isStaff()?'':'<button class="btn secondary full" style="margin-bottom:10px" onclick="exportCustomers()">⬇ 下载客户明细（CSV）</button>')+'<div id="clist">'+custList('')+'</div></div>';
 }
 function showCustomer(id){
   showSection('customers');
@@ -376,11 +392,11 @@ function showCustomer(id){
   const vs=D.visits.filter(v=>v.customer_id===id);
   const pm=potMap();
   $('customers').innerHTML='<h2>👥 '+esc(c.name)+'</h2>'+
-   '<div class="card"><div class="row between"><span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="muted">'+(isAdmin()?'Sales：'+esc(nameOf(c.owner_id)):'')+'</span></div>'+
-   '<p>联系人：'+esc(c.contact||'-')+'<br>电话：'+esc(c.phone||'-')+'<br>未获取电话号码：'+esc(c.office_no||'-')+'<br>地址：'+esc(c.address||'-')+'<br>账期：'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+' 天')+'<br>付款方式：'+esc(c.payment_method||'Cheque')+'<br>Kow Hock / Franchise：'+esc(c.kow_hock||'No')+'<br>竞品：'+esc(c.competitor||'-')+'<br>产品：'+esc(c.products||'-')+'<br>下次跟进：'+esc(c.follow_up||'-')+'<br>潜在订单：'+money(pm.get(c.id)||0)+'<br>备注：'+esc(c.remarks||'-')+'</p>'+
+   '<div class="card"><div class="row between"><span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="muted">'+(isAdmin()?'负责人：'+esc(nameOf(c.owner_id)):'')+'</span></div>'+
+   '<p>联系人：'+esc(c.contact||'-')+'<br>电话：'+esc(c.phone||'-')+'<br>未获取电话号码：'+esc(c.office_no||'-')+'<br>地址：'+esc(c.address||'-')+'<br>账期：'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+' 天')+'<br>付款方式：'+esc(c.payment_method||'Cheque')+'<br>Kow Hock / Franchise：'+esc(c.kow_hock||'No')+'<br>竞品：'+esc(c.competitor||'-')+'<br>产品：'+esc(c.products||'-')+'<br>下次跟进：'+esc(c.follow_up||'-')+(isStaff()?'':'<br>潜在订单：'+money(pm.get(c.id)||0))+'<br>备注：'+esc(c.remarks||'-')+'</p>'+
    (c.card_photo?(cardSrc(c.card_photo)?'<img src="'+esc(cardSrc(c.card_photo))+'" alt="名片" style="max-width:240px;width:100%;border-radius:10px;border:1px solid #e5e7eb;display:block;margin-top:4px">':'<p class="muted">名片图片加载中，请点右上角「↻ 刷新」</p>'):'')+
-   '<div class="row"><button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">＋ 新增拜访</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button><button class="btn secondary" onclick="renderCustomers()">返回列表</button></div></div>'+
-   '<div class="card"><h3>拜访历史（'+vs.length+'）</h3>'+(vs.length?vs.map(v=>visitItem(v,false)).join(''):'<div class="muted">还没有拜访记录</div>')+'</div>';
+   '<div class="row">'+(isStaff()?'':'<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">＋ 新增拜访</button>')+'<button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button><button class="btn secondary" onclick="renderCustomers()">返回列表</button></div></div>'+
+   (isStaff()?'':'<div class="card"><h3>拜访历史（'+vs.length+'）</h3>'+(vs.length?vs.map(v=>visitItem(v,false)).join(''):'<div class="muted">还没有拜访记录</div>')+'</div>');
 }
 let cardPath=null;    // 存进 customers.card_photo 的值：Storage 里的路径（私密桶，没有公开链接）
 let cardPreview=null; // 仅用于表单里即时预览的临时签名链接，不会存进数据库
@@ -497,11 +513,13 @@ function pickerList(q){
 }
 function filterPicker(){$('plist').innerHTML=pickerList($('pq').value.trim().toLowerCase())}
 function visitPicker(){
+  if(isStaff())return;
   showSection('visits');
   $('visits').innerHTML='<h2>选择要拜访的客户</h2><div class="card"><input id="pq" placeholder="搜索客户" oninput="filterPicker()"><div id="plist">'+pickerList('')+'</div><button class="btn secondary" style="margin-top:10px" onclick="renderVisits()">返回</button></div>';
 }
 const PRODUCT_OPTIONS=['12V','21V Cordless','Corded','Measuring Tools','Vacuum','Water Jet','Power Bank','Grease','Measuring Tape','Yendare Product','ADX Cutting Disc','Offer Item'];
 function visitForm(cid){
+  if(isStaff())return;
   showSection('visits');
   const c=D.customers.find(x=>x.id===cid);
   if(!c){renderVisits();return}
@@ -551,11 +569,21 @@ function renderAdmin(){
     const rc=H.records.find(r=>r.user_id===u.id&&r.work_date===todayKL);
     const sch=H.schedules.find(x=>x.id===u.schedule_id);
     const days=H.records.filter(r=>r.user_id===u.id&&r.work_date.startsWith(hrMonth)).length;
+    const permCell='<label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:400;font-size:13px;color:inherit;white-space:nowrap"><input type="checkbox" style="width:auto;margin:0" '+(u.can_customers===true?'checked':'')+' onchange="setStaffPerm(\''+esc(u.id)+'\',\'can_customers\',this.checked)"> 客户</label>';
     return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td><td>'+esc(u.dept||'-')+'</td><td>'+esc(sch?sch.name:'未设置')+'</td><td>'+(rc?'✅ '+klHM(rc.clock_in)+(rc.clock_out?' - '+klHM(rc.clock_out):''):'—')+'</td><td>'+days+'</td>'+
       '<td><div class="row" style="gap:6px"><button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>'+
       '<button class="btn secondary" style="padding:6px 10px" onclick="hrTab=\'rec\';fEmp=\''+esc(u.id)+'\';page(\'hr\')">出勤</button>'+
       (u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>'
                :'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>')+
+      '</div></td><td>'+permCell+'</td></tr>';
+  }).join('');
+  const allAdmins=D.profiles.filter(p=>p.role==='admin').slice().sort((a,b)=>a.username.localeCompare(b.username));
+  const adminRows=allAdmins.map(u=>{
+    const self=u.id===me.id;
+    return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(self?' <span class="muted">（我）</span>':'')+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td>'+
+      '<td><div class="row" style="gap:6px"><button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>'+
+      (self?'':(u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>'
+                        :'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>'))+
       '</div></td></tr>';
   }).join('');
   const staff=allSales.map(u=>{
@@ -579,9 +607,18 @@ function renderAdmin(){
    '<button class="btn full" onclick="createUserAccount()">创建账号</button>'+
    '<p class="muted">创建后把账号名和这个初始密码告诉对方，并请他登录后立刻在首页修改密码。停用账号或重置密码，仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
    '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th><th>操作</th></tr>'+(staff||'<tr><td colspan="6" class="muted">暂无 Sales</td></tr>')+'</table></div><p class="muted">停用后这个人无法登录，但历史的客户、拜访、打卡记录都会保留，随时可以重新启用。重置密码仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
-   '<div class="card"><h3>Staff（办公室 / 仓库）管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>部门</th><th>Schedule</th><th>今日打卡</th><th>本月出勤</th><th>操作</th></tr>'+(staffRows||'<tr><td colspan="7" class="muted">暂无 Staff，可在上方「新增账号」选择角色 Staff 创建</td></tr>')+'</table></div><p class="muted">Staff 登录后只能使用考勤打卡。停用后无法登录，历史打卡记录会保留。「出勤」可直接查看此人的考勤明细；部门和 Schedule 到「考勤 → 员工」修改。</p></div>'+
+   '<div class="card"><h3>Staff（办公室 / 仓库）管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>部门</th><th>Schedule</th><th>今日打卡</th><th>本月出勤</th><th>操作</th><th>权限</th></tr>'+(staffRows||'<tr><td colspan="8" class="muted">暂无 Staff，可在上方「新增账号」选择角色 Staff 创建</td></tr>')+'</table></div><p class="muted">Staff 默认只能使用考勤打卡；勾选「权限 → 客户」后，可使用客户页面（只能看到和编辑自己新增的客户，没有拜访、外勤、下载）。停用后无法登录，历史打卡记录会保留。「出勤」可直接查看此人的考勤明细；部门和 Schedule 到「考勤 → 员工」修改。</p></div>'+
+   '<div class="card"><h3>Admin 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>操作</th></tr>'+(adminRows||'<tr><td colspan="3" class="muted">暂无 Admin</td></tr>')+'</table></div><p class="muted">Admin 拥有全部权限（客户、拜访、考勤、后台）。新增 Admin：在上方「新增账号」选择角色 Admin。不能停用自己。</p></div>'+
    '<div class="card"><h3>全部客户与负责人（可直接重新分配）</h3><div class="table"><table><tr><th>客户</th><th>等级</th><th>所属 Sales</th><th>跟进</th><th></th></tr>'+(custRows||'<tr><td colspan="5" class="muted">暂无客户</td></tr>')+'</table></div></div>'+
    '<div class="card"><h3>数据备份</h3><button class="btn secondary" onclick="backup()">导出 JSON 备份</button><p class="muted">导出当前可见的全部客户、拜访、打卡（最近 1000 条）记录。</p></div>';
+}
+async function setStaffPerm(id,key,val){
+  await guard(async()=>{
+    const r=await sb.from('profiles').update({[key]:val}).eq('id',id);
+    if(r.error){renderAdmin();throw r.error}
+    await loadAll();renderAdmin();
+    toast(val?'已开启，对方刷新或重新登录后生效':'已关闭');
+  });
 }
 async function renameSales(id,currentName){
   const input=prompt('输入新的姓名',currentName);
