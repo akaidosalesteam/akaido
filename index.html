@@ -169,7 +169,7 @@ async function enter(user){
   me=prof;
   me.pwdChanged=!!(user.user_metadata&&user.user_metadata.pwd_changed);
   await loadAll();
-  await regDevice();
+  if(me.role!=='sales'&&me.track_attendance!==false)await regDevice();
   $('login').classList.add('hidden');$('app').classList.remove('hidden');
   $('userline').textContent=me.name+' · '+me.role.toUpperCase();
   applyNav();
@@ -179,6 +179,7 @@ function applyNav(){
   const allow=isStaff()?allowedPages():null;
   document.querySelectorAll('.nav button').forEach(b=>{
     if(b.id==='navAdmin'){b.classList.toggle('hidden',!isAdmin());return}
+    if(me.role==='sales'&&b.dataset.p==='hr'){b.classList.add('hidden');return}
     b.classList.toggle('hidden',!!allow&&!allow.includes(b.dataset.p));
   });
 }
