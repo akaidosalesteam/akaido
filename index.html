@@ -169,6 +169,7 @@ async function enter(user){
   me=prof;
   me.pwdChanged=!!(user.user_metadata&&user.user_metadata.pwd_changed);
   await loadAll();
+  await regDevice();
   $('login').classList.add('hidden');$('app').classList.remove('hidden');
   $('userline').textContent=me.name+' · '+me.role.toUpperCase();
   applyNav();
@@ -687,7 +688,8 @@ const hm=n=>n?Math.floor(n/60)+'h'+String(n%60).padStart(2,'0')+'m':'0';
 const okRule=v=>/^(OFF|([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d)$/.test(v);
 const ruleOf=(s,d)=>{if(!s)return null;const w=new Date(d+'T00:00:00Z').getUTCDay();return w===0?s.sun:w===6?s.sat:s.weekday};
 let H={schedules:[],locations:[],settings:{ot_grace_min:30,ot_unit:'30',late_grace_min:0,enforce_geofence:true},records:[],from:'',err:''},hrTab='mine',hrMonth=klDate(Date.now()).slice(0,7),fEmp='',hrTimer=null,cam=null,camPos=null,camType='';
-async function loadHR(){
+async function loadHR(){await loadDev();return loadHR0()}
+async function loadHR0(){
   const m=hrMonth,y=+m.slice(0,4),mo=+m.slice(5,7),nxt=mo===12?(y+1)+'-01-01':y+'-'+String(mo+1).padStart(2,'0')+'-01';
   const errs=[];
   const pick=(x,def)=>{if(x.error){errs.push(x.error.message||String(x.error));return def}return x.data};
@@ -728,7 +730,7 @@ function calc(r){
 function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
 function stopCam(){if(cam){cam.getTracks().forEach(t=>t.stop());cam=null}}
 function closeModal(){stopCam();$('modal').classList.add('hidden');$('modalBox').innerHTML=''}
-const hrErr=m=>{m=m||'';return /REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
+const hrErr=m=>{m=m||'';return /DEVICE_/.test(m)?'此手机还没有被管理员批准，暂时不能打卡':/REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
 
 function renderHR(){
   clearInterval(hrTimer);
@@ -736,7 +738,7 @@ function renderHR(){
   let h='<h2>🕐 考勤</h2>';
   if(H.err)h+='<div class="banner">考勤数据读取失败：'+esc(H.err)+'</div>';
   if(!me.pwdChanged)h+='<div class="banner"><b>⚠️ 请先修改默认密码。</b>请到本页最下方「修改我的密码」。</div>';
-  if(admin)h+='<div class="row" style="margin-bottom:10px">'+[['mine','我的打卡'],['rec','出勤记录'],['emp','员工'],['sch','Schedule'],['set','地点与设置']].map(t=>'<button class="btn '+(tab===t[0]?'':'secondary')+'" onclick="hrTab=\''+t[0]+'\';renderHR()">'+t[1]+'</button>').join('')+'</div>';
+  if(admin)h+='<div class="row" style="margin-bottom:10px">'+[['mine','我的打卡'],['rec','出勤记录'],['emp','员工'+(DV.some(d=>d.status==='pending')?' 🔴':'')],['sch','Schedule'],['set','地点与设置']].map(t=>'<button class="btn '+(tab===t[0]?'':'secondary')+'" onclick="hrTab=\''+t[0]+'\';renderHR()">'+t[1]+'</button>').join('')+'</div>';
   h+=({mine:tabMine,rec:tabRec,emp:tabEmp,sch:tabSch,set:tabSet})[tab]();
   if(tab==='mine')h+='<div class="card"><h3>🔒 修改我的密码</h3><input id="pw1" type="password" placeholder="新密码（至少 8 位）" autocomplete="new-password"><input id="pw2" type="password" placeholder="再输入一次新密码" autocomplete="new-password"><button class="btn" onclick="changePassword()">保存新密码</button></div>';
   $('hr').innerHTML=h;
@@ -745,6 +747,7 @@ function tabMine(){
   const t=klDate(Date.now()),s=H.schedules.find(x=>x.id===me.schedule_id),rc=H.today;
   let h='<div class="card"><div class="muted">'+t+' · 马来西亚时间</div><div id="hrNow" style="font-size:38px;font-weight:800">'+klHM(Date.now())+'</div><p class="muted">今日规则：'+(s?esc(s.name)+' · '+esc(ruleOf(s,t)):'未设置 Schedule，请联系管理员')+'<br>上班 '+(rc?klHM(rc.clock_in):'-')+' · 下班 '+(rc&&rc.clock_out?klHM(rc.clock_out):'-')+'</p>';
   if(me.track_attendance===false)h+='<div class="muted">此账号不需要考勤打卡</div>';
+  else if(me.devState==='pending'||me.devState==='revoked'){h+='<div class="banner">📱 '+(me.devState==='pending'?'此手机还没有被管理员批准，所以暂时不能打卡。请联系管理员批准后，再点下面的「重新检查」。':'这部手机的绑定已被取消，请联系管理员。')+'</div><button class="btn secondary" onclick="recheckDev()">重新检查</button>'}
   else{
     const outNow=(H.todayOuts||[]).find(o=>!o.back_at);
     h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
@@ -835,7 +838,8 @@ function exportRec(mine){
 }
 /* ----- Admin：员工 ----- */
 const schOpts=sel=>'<option value="">（未设置）</option>'+H.schedules.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.name)+'</option>').join('');
-function tabEmp(){
+function tabEmp(){return tabEmp0()+devCard()}
+function tabEmp0(){
   const rows=D.profiles.slice().sort((a,b)=>a.username.localeCompare(b.username)).map(p=>'<tr'+(p.active?'':' style="opacity:.55"')+'><td>'+esc(p.name)+'</td><td>'+esc(p.username)+'</td><td>'+esc(p.role)+'</td><td><a href="#" onclick="setDept(\''+esc(p.id)+'\',\''+jsAttr(p.dept||'')+'\');return false">'+esc(p.dept||'设置')+'</a></td><td><select onchange="setProf(\''+esc(p.id)+'\',{schedule_id:this.value||null})">'+schOpts(p.schedule_id)+'</select></td><td><input type="checkbox" style="width:auto;margin:0" '+(p.track_attendance!==false?'checked':'')+' onchange="setProf(\''+esc(p.id)+'\',{track_attendance:this.checked})"></td><td>'+(p.id===me.id?'':'<button class="btn secondary" style="padding:6px 10px" onclick="if(confirm(\''+(p.active?'停用':'启用')+'这个账号？'+'\'))setProf(\''+esc(p.id)+'\',{active:'+!p.active+'})">'+(p.active?'停用':'启用')+'</button>'+(p.role==='staff'?' <button class="btn danger" style="padding:6px 10px;margin-left:6px" onclick="delStaff(\''+esc(p.id)+'\',\''+jsAttr(p.name)+'\')">删除</button>':''))+'</td></tr>').join('');
   return '<div class="card"><h3>员工（含 Sales / Admin）</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>角色</th><th>部门</th><th>Schedule</th><th>考勤</th><th></th></tr>'+rows+'</table></div><p class="muted">「考勤」打勾才需要打卡。停用后无法登录，历史记录保留。</p></div>'+
    '<div class="card"><h3>新增员工账号</h3><label>账号名</label><input id="ne_u" autocapitalize="none" autocorrect="off"><label>姓名</label><input id="ne_n"><label>角色</label><select id="ne_r"><option value="staff">Staff（仓库 / 办公室）</option><option value="sales">Sales</option><option value="admin">Admin</option></select><label>部门</label><input id="ne_d" placeholder="Warehouse / Office"><label>Schedule</label><select id="ne_s">'+schOpts('')+'</select><label>初始密码（至少 8 位）</label><input id="ne_p" type="password"><button class="btn full" onclick="newEmp()">创建账号</button></div>';
@@ -894,11 +898,27 @@ async function lcAdd(){
 async function lcSet(id,patch){await guard(async()=>{const r=await sb.from('hr_locations').update(patch).eq('id',id);if(r.error)throw r.error;await loadHR();renderHR()})}
 async function lcDel(id){if(!confirm('确定删除这个地点？'))return;await guard(async()=>{const r=await sb.from('hr_locations').delete().eq('id',id);if(r.error)throw r.error;await loadHR();renderHR()})}
 
+/* ========== 设备绑定（一人一机，Admin 批准） ========== */
+let DV=[],_mt='';
+function devTok(){let t='';try{t=localStorage.getItem('akaido_dev')||''}catch(e){}if(t.length<32){t=Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,'0')).join('');try{localStorage.setItem('akaido_dev',t)}catch(e){_mt=_mt||t;t=_mt}}return t}
+function devLabel(){const u=navigator.userAgent,os=(/iPhone|iPad|Android [\d.]+(?:; [^)]+)?|Windows NT [\d.]+|Mac OS X [\d_]+|Linux/.exec(u)||['?'])[0],br=/Edg\//.test(u)?'Edge':/Firefox\//.test(u)?'Firefox':/Chrome\/|CriOS/.test(u)?'Chrome':/Safari\//.test(u)?'Safari':'?';return (os+' · '+br).replace(/_/g,'.')}
+async function regDevice(){me.devState='unknown';try{const {data,error}=await sb.rpc('hr_device_register',{p_label:devLabel()});if(!error&&data)me.devState=data}catch(e){}}
+async function recheckDev(){await guard(async()=>{await regDevice();renderHR();toast(me.devState==='approved'?'已批准，可以打卡了':'还在等待管理员批准')})}
+async function loadDev(){try{const r=await sb.from('hr_devices').select('*').order('requested_at',{ascending:false});DV=r.error?[]:(r.data||[])}catch(e){DV=[]}}
+function devCard(){
+  const pend=DV.filter(d=>d.status==='pending').length;
+  const rows=DV.map(d=>{const b=DV.find(x=>x.status==='approved'&&x.token_hash===d.token_hash&&x.user_id!==d.user_id);
+    return '<tr><td>'+esc(nameOf(d.user_id))+'</td><td>'+esc(d.label||'-')+(b?'<br><span class="red">⚠ 这部手机已绑定给 '+esc(nameOf(b.user_id))+'</span>':'')+'</td><td>'+({pending:'<b class="red">待批准</b>',approved:'✅ 已绑定',revoked:'已取消'}[d.status]||esc(d.status))+'</td><td>'+(d.last_used?fmt(d.last_used):'-')+'</td><td>'+(d.status==='approved'?'':'<button class="btn" style="padding:6px 10px" onclick="devApprove(\''+esc(d.id)+'\')">批准</button> ')+'<button class="btn danger" style="padding:6px 10px" onclick="devDel(\''+esc(d.id)+'\')">'+(d.status==='approved'?'解除':'删除')+'</button></td></tr>'}).join('');
+  return '<div class="card"><h3>📱 设备管理'+(pend?' <span class="badge" style="background:#fde8e8;color:#b42318">'+pend+' 个待批准</span>':'')+'</h3><div class="table"><table><tr><th>员工</th><th>设备</th><th>状态</th><th>最后使用</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有设备登记</td></tr>')+'</table></div><p class="muted">员工登录后会自动提交申请，批准后才能打卡。每人只能绑定一部手机，换手机请员工用新手机登录，这里批准新的，旧的自动取消。「解除」后，他的手机会重新变成待批准。</p></div>';
+}
+async function devApprove(id){await guard(async()=>{const {error}=await sb.rpc('hr_device_approve',{p_id:id});if(error){const m=error.message||'';toast(/DEVICE_BOUND_TO_OTHER/.test(m)?'这部手机已绑定给：'+m.replace(/^.*DEVICE_BOUND_TO_OTHER:\s*/,''):'操作失败：'+m);return}await loadDev();renderHR();toast('已批准')})}
+async function devDel(id){if(!confirm('确定？这部手机之后需要重新提交申请。'))return;await guard(async()=>{const r=await sb.from('hr_devices').delete().eq('id',id);if(r.error)throw r.error;await loadDev();renderHR();toast('已处理')})}
+
 /* ========== 启动 ========== */
 (async function init(){
   ['lu','lp'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()}));
   if(!window.supabase){loginMsg('无法加载网络组件，请检查网络后刷新页面');return}
-  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{'x-device-token':devTok()}}});
   sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&me){me=null;location.reload()}});
   try{
     const {data}=await sb.auth.getSession();
