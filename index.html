@@ -572,7 +572,8 @@ function renderAdmin(){
     const rc=H.records.find(r=>r.user_id===u.id&&r.work_date===todayKL);
     const sch=H.schedules.find(x=>x.id===u.schedule_id);
     const days=H.records.filter(r=>r.user_id===u.id&&r.work_date.startsWith(hrMonth)).length;
-    const permCell='<label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:400;font-size:13px;color:inherit;white-space:nowrap"><input type="checkbox" style="width:auto;margin:0" '+(u.can_customers===true?'checked':'')+' onchange="setStaffPerm(\''+esc(u.id)+'\',\'can_customers\',this.checked)"> 客户</label>';
+    const lab=(k,t)=>'<label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:400;font-size:13px;color:inherit;white-space:nowrap"><input type="checkbox" style="width:auto;margin:0" '+(u[k]===true?'checked':'')+' onchange="setStaffPerm(\''+esc(u.id)+'\',\''+k+'\',this.checked)"> '+t+'</label>';
+    const permCell='<div style="display:grid;gap:4px">'+lab('can_customers','客户')+lab('can_att_download','下载记录')+'</div>';
     return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td><td>'+esc(u.dept||'-')+'</td><td>'+esc(sch?sch.name:'未设置')+'</td><td>'+(rc?'✅ '+klHM(rc.clock_in)+(rc.clock_out?' - '+klHM(rc.clock_out):''):'—')+'</td><td>'+days+'</td>'+
       '<td><div class="row" style="gap:6px"><button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>'+
       '<button class="btn secondary" style="padding:6px 10px" onclick="hrTab=\'rec\';fEmp=\''+esc(u.id)+'\';page(\'hr\')">出勤</button>'+
@@ -610,7 +611,7 @@ function renderAdmin(){
    '<button class="btn full" onclick="createUserAccount()">创建账号</button>'+
    '<p class="muted">创建后把账号名和这个初始密码告诉对方，并请他登录后立刻在首页修改密码。停用账号或重置密码，仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
    '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th><th>操作</th></tr>'+(staff||'<tr><td colspan="6" class="muted">暂无 Sales</td></tr>')+'</table></div><p class="muted">停用后这个人无法登录，但历史的客户、拜访、打卡记录都会保留，随时可以重新启用。重置密码仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
-   '<div class="card"><h3>Staff（办公室 / 仓库）管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>部门</th><th>Schedule</th><th>今日打卡</th><th>本月出勤</th><th>操作</th><th>权限</th></tr>'+(staffRows||'<tr><td colspan="8" class="muted">暂无 Staff，可在上方「新增账号」选择角色 Staff 创建</td></tr>')+'</table></div><p class="muted">Staff 默认只能使用考勤打卡；勾选「权限 → 客户」后，可使用客户页面（只能看到和编辑自己新增的客户，没有拜访、外勤、下载）。停用后无法登录，历史打卡记录会保留。「出勤」可直接查看此人的考勤明细；部门和 Schedule 到「考勤 → 员工」修改。</p></div>'+
+   '<div class="card"><h3>Staff（办公室 / 仓库）管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>部门</th><th>Schedule</th><th>今日打卡</th><th>本月出勤</th><th>操作</th><th>权限</th></tr>'+(staffRows||'<tr><td colspan="8" class="muted">暂无 Staff，可在上方「新增账号」选择角色 Staff 创建</td></tr>')+'</table></div><p class="muted">Staff 默认只能使用考勤打卡；勾选「权限 → 客户」后，可使用客户页面（只能看到和编辑自己新增的客户，没有拜访、外勤）；勾选「下载记录」后，可在「考勤 → 我的出勤」下载自己的本月明细。停用后无法登录，历史打卡记录会保留。「出勤」可直接查看此人的考勤明细；部门和 Schedule 到「考勤 → 员工」修改。</p></div>'+
    '<div class="card"><h3>Admin 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>操作</th></tr>'+(adminRows||'<tr><td colspan="3" class="muted">暂无 Admin</td></tr>')+'</table></div><p class="muted">Admin 拥有全部权限（客户、拜访、考勤、后台）。新增 Admin：在上方「新增账号」选择角色 Admin。不能停用自己。</p></div>'+
    '<div class="card"><h3>全部客户与负责人（可直接重新分配）</h3><div class="table"><table><tr><th>客户</th><th>等级</th><th>所属 Sales</th><th>跟进</th><th></th></tr>'+(custRows||'<tr><td colspan="5" class="muted">暂无客户</td></tr>')+'</table></div></div>'+
    '<div class="card"><h3>数据备份</h3><button class="btn secondary" onclick="backup()">导出 JSON 备份</button><p class="muted">导出当前可见的全部客户、拜访、打卡（最近 1000 条）记录。</p></div>';
@@ -759,7 +760,7 @@ async function setMonth(v){if(!v)return;hrMonth=v;await guard(async()=>{await lo
 function monthCard(uid){
   const rs=H.records.filter(r=>r.user_id===uid&&r.work_date.startsWith(hrMonth)),T={late:0,early:0,ot:0,rest:0};
   const rows=rs.map(r=>{const c=calc(r);for(const k in T)T[k]+=c[k];return '<tr><td>'+r.work_date+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+outCell(r)+'</td><td>'+esc(c.note)+'</td></tr>'}).join('');
-  return '<div class="card"><div class="row between"><h3 style="margin:0">我的出勤</h3>'+monthBar()+'</div><p class="muted">'+rs.length+' 天 · 迟到 '+hm(T.late)+' · 早退 '+hm(T.early)+' · OT '+hm(T.ot)+(T.rest?' · 休息日工时 '+hm(T.rest):'')+'</p><div class="table"><table><tr><th>日期</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>外出</th><th>备注</th></tr>'+(rows||'<tr><td colspan="9" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
+  return '<div class="card"><div class="row between"><h3 style="margin:0">我的出勤</h3>'+monthBar()+(canDl()?'<button class="btn secondary" style="padding:6px 12px" onclick="exportRec(true)">⬇ 下载本月明细</button>':'')+'</div><p class="muted">'+rs.length+' 天 · 迟到 '+hm(T.late)+' · 早退 '+hm(T.early)+' · OT '+hm(T.ot)+(T.rest?' · 休息日工时 '+hm(T.rest):'')+'</p><div class="table"><table><tr><th>日期</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>外出</th><th>备注</th></tr>'+(rows||'<tr><td colspan="9" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
 }
 /* ----- 外出 / 回公司（不影响上班、下班打卡）----- */
 const outTxt=o=>klHM(o.out_at)+'-'+(o.back_at?klHM(o.back_at):'未回')+' '+o.reason;
@@ -822,12 +823,14 @@ function tabRec(){
    '<div class="card"><h3>月度汇总</h3><div class="table"><table><tr><th>员工</th><th>出勤天数</th><th>迟到</th><th>OT</th><th>休息日工时</th><th>忘记下班</th></tr>'+(sr||'<tr><td colspan="6" class="muted">本月没有记录</td></tr>')+'</table></div><p class="muted">OT、迟到按「设置」里的当前规则计算；休息日工时单独列出，未计入 OT。</p></div>'+
    '<div class="card"><div class="row between"><h3 style="margin:0">明细</h3><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>外出</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="12" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
 }
-function exportRec(){
-  const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(!fEmp||r.user_id===fEmp)).slice().sort((a,b)=>a.work_date.localeCompare(b.work_date)||nameOf(a.user_id).localeCompare(nameOf(b.user_id)));
+const canDl=()=>isAdmin()||me.can_att_download===true;
+function exportRec(mine){
+  if(mine&&!canDl()){toast('没有下载权限');return}
+  const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(mine?r.user_id===me.id:(!fEmp||r.user_id===fEmp))).slice().sort((a,b)=>a.work_date.localeCompare(b.work_date)||nameOf(a.user_id).localeCompare(nameOf(b.user_id)));
   if(!rs.length){toast('本月没有记录可导出');return}
   const header=['日期','员工','规则','上班','下班','迟到(分钟)','早退(分钟)','OT(分钟)','休息日工时(分钟)','备注','外出','上班距离(m)','上班GPS'];
   const rows=rs.map(r=>{const c=calc(r);return [r.work_date,nameOf(r.user_id),r.sched_rule||'',klHM(r.clock_in),klHM(r.clock_out),c.late||0,c.early||0,c.ot||0,c.rest||0,c.note||'',outPlain(r),r.in_distance_m!=null?Math.round(r.in_distance_m):'',gpsText(r.in_lat,r.in_lng)]});
-  dlCSV('AKAIDO-出勤明细-'+hrMonth+(fEmp?'-'+nameOf(fEmp):'')+'.csv',header,rows);
+  dlCSV('AKAIDO-出勤明细-'+hrMonth+(mine?'-'+nameOf(me.id):(fEmp?'-'+nameOf(fEmp):''))+'.csv',header,rows);
   toast('已导出 '+rs.length+' 条记录');
 }
 /* ----- Admin：员工 ----- */
