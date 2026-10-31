@@ -345,9 +345,29 @@ function custList(q){
   }).join('');
 }
 function filterCustomers(){$('clist').innerHTML=custList($('cq').value.trim().toLowerCase())}
+function dlCSV(filename,header,rows){
+  const esc2=v=>{v=String(v==null?'':v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const csv='\uFEFF'+[header,...rows].map(r=>r.map(esc2).join(',')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+const txtNo=v=>v?'\t'+v:'';   // 电话前加 Tab，Excel 不会吞掉开头的 0
+function exportCustomers(){
+  if(!me||isStaff())return;
+  const admin=isAdmin();
+  const list=D.customers.filter(c=>admin||c.owner_id===me.id).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!list.length){toast('没有客户可导出');return}
+  const pm=potMap();
+  const header=['客户名称','Sales','等级','联系人','电话','未获取电话号码','地址','账期','付款方式','Kow Hock / Franchise','竞品','产品','下次跟进','潜在订单(RM)','备注'];
+  const rows=list.map(c=>[c.name,nameOf(c.owner_id),c.grade,c.contact,txtNo(c.phone),txtNo(c.office_no),c.address,c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天',c.payment_method||'Cheque',c.kow_hock||'No',c.competitor,c.products,c.follow_up,Number(pm.get(c.id)||0).toFixed(2),c.remarks]);
+  dlCSV('AKAIDO-客户明细-'+(admin?'全部':me.name)+'-'+ymd()+'.csv',header,rows);
+  toast('已导出 '+list.length+' 位客户');
+}
 function renderCustomers(){
   $('customers').innerHTML='<h2>👥 客户 CRM</h2><div class="card"><button class="btn full" onclick="customerForm()">＋ 新增客户</button></div>'+
-    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()"><div id="clist">'+custList('')+'</div></div>';
+    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()"><button class="btn secondary full" style="margin-bottom:10px" onclick="exportCustomers()">⬇ 下载客户明细（CSV）</button><div id="clist">'+custList('')+'</div></div>';
 }
 function showCustomer(id){
   showSection('customers');
@@ -722,7 +742,15 @@ function tabRec(){
   const sr=Object.keys(S).map(id=>{const u=S[id];return '<tr><td>'+esc(nameOf(id))+'</td><td>'+u.d+'</td><td>'+u.n+' 次 / '+hm(u.lm)+'</td><td>'+hm(u.ot)+'</td><td>'+hm(u.rest)+'</td><td>'+u.miss+'</td></tr>'}).join('');
   return '<div class="card"><div class="row between">'+monthBar()+'<select style="width:auto;margin:0" onchange="fEmp=this.value;renderHR()"><option value="">全部员工</option>'+emps.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===fEmp?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></div></div>'+
    '<div class="card"><h3>月度汇总</h3><div class="table"><table><tr><th>员工</th><th>出勤天数</th><th>迟到</th><th>OT</th><th>休息日工时</th><th>忘记下班</th></tr>'+(sr||'<tr><td colspan="6" class="muted">本月没有记录</td></tr>')+'</table></div><p class="muted">OT、迟到按「设置」里的当前规则计算；休息日工时单独列出，未计入 OT。</p></div>'+
-   '<div class="card"><h3>明细</h3><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="11" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
+   '<div class="card"><div class="row between"><h3 style="margin:0">明细</h3><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="11" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
+}
+function exportRec(){
+  const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(!fEmp||r.user_id===fEmp)).slice().sort((a,b)=>a.work_date.localeCompare(b.work_date)||nameOf(a.user_id).localeCompare(nameOf(b.user_id)));
+  if(!rs.length){toast('本月没有记录可导出');return}
+  const header=['日期','员工','规则','上班','下班','迟到(分钟)','早退(分钟)','OT(分钟)','休息日工时(分钟)','备注','上班距离(m)','上班GPS'];
+  const rows=rs.map(r=>{const c=calc(r);return [r.work_date,nameOf(r.user_id),r.sched_rule||'',klHM(r.clock_in),klHM(r.clock_out),c.late||0,c.early||0,c.ot||0,c.rest||0,c.note||'',r.in_distance_m!=null?Math.round(r.in_distance_m):'',gpsText(r.in_lat,r.in_lng)]});
+  dlCSV('AKAIDO-出勤明细-'+hrMonth+(fEmp?'-'+nameOf(fEmp):'')+'.csv',header,rows);
+  toast('已导出 '+rs.length+' 条记录');
 }
 /* ----- Admin：员工 ----- */
 const schOpts=sel=>'<option value="">（未设置）</option>'+H.schedules.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.name)+'</option>').join('');
