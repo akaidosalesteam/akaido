@@ -575,7 +575,7 @@ function renderAdmin(){
       '<button class="btn secondary" style="padding:6px 10px" onclick="hrTab=\'rec\';fEmp=\''+esc(u.id)+'\';page(\'hr\')">出勤</button>'+
       (u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>'
                :'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>')+
-      '</div></td><td>'+permCell+'</td></tr>';
+      '<button class="btn danger" style="padding:6px 10px" onclick="delStaff(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">删除</button></div></td><td>'+permCell+'</td></tr>';
   }).join('');
   const allAdmins=D.profiles.filter(p=>p.role==='admin').slice().sort((a,b)=>a.username.localeCompare(b.username));
   const adminRows=allAdmins.map(u=>{
@@ -694,6 +694,13 @@ async function loadHR(){
       q,sb.from('hr_clock_records').select('*').eq('user_id',me.id).eq('work_date',klDate(Date.now())).maybeSingle()]);
     H={...H,schedules:pick(r[0],[]),locations:pick(r[1],[]),settings:pick(r[2],null)||H.settings,records:pick(r[3],[]),today:pick(r[4],null),err:errs[0]||''};
   }catch(e){H.err=e.message||String(e)}
+  try{   // 外出记录：失败（例如还没运行 SQL）时只是隐藏外出功能
+    let oq=sb.from('hr_outings').select('*').gte('work_date',m+'-01').lt('work_date',nxt).order('out_at',{ascending:true}).limit(3000);
+    if(!isAdmin())oq=oq.eq('user_id',me.id);
+    const o=await Promise.all([oq,sb.from('hr_outings').select('*').eq('user_id',me.id).eq('work_date',klDate(Date.now())).order('out_at',{ascending:true})]);
+    if(o[0].error||o[1].error){H.outOk=false;H.outs=[];H.todayOuts=[]}
+    else{H.outOk=true;H.outs=o[0].data;H.todayOuts=o[1].data}
+  }catch(e){H.outOk=false;H.outs=[];H.todayOuts=[]}
 }
 
 /* 迟到 / 早退 / OT：规则用打卡当天的快照；休息日工时单独列出，不算 OT */
@@ -717,7 +724,7 @@ function calc(r){
 function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
 function stopCam(){if(cam){cam.getTracks().forEach(t=>t.stop());cam=null}}
 function closeModal(){stopCam();$('modal').classList.add('hidden');$('modalBox').innerHTML=''}
-const hrErr=m=>{m=m||'';return /OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
+const hrErr=m=>{m=m||'';return /REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
 
 function renderHR(){
   clearInterval(hrTimer);
@@ -734,7 +741,12 @@ function tabMine(){
   const t=klDate(Date.now()),s=H.schedules.find(x=>x.id===me.schedule_id),rc=H.today;
   let h='<div class="card"><div class="muted">'+t+' · 马来西亚时间</div><div id="hrNow" style="font-size:38px;font-weight:800">'+klHM(Date.now())+'</div><p class="muted">今日规则：'+(s?esc(s.name)+' · '+esc(ruleOf(s,t)):'未设置 Schedule，请联系管理员')+'<br>上班 '+(rc?klHM(rc.clock_in):'-')+' · 下班 '+(rc&&rc.clock_out?klHM(rc.clock_out):'-')+'</p>';
   if(me.track_attendance===false)h+='<div class="muted">此账号不需要考勤打卡</div>';
-  else h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
+  else{
+    const outNow=(H.todayOuts||[]).find(o=>!o.back_at);
+    h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
+    if(H.outOk&&rc&&!rc.clock_out)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">你正在外出中（'+klHM(outNow.out_at)+' 起）。回来后请点「回公司」，回公司前不能下班打卡。</p>':'');
+    if(H.todayOuts&&H.todayOuts.length)h+='<div class="muted" style="margin-top:8px">今日外出：'+H.todayOuts.map(o=>'<br>'+klHM(o.out_at)+' - '+(o.back_at?klHM(o.back_at):'<span class="red">未回</span>')+' · '+esc(o.reason)).join('')+'</div>';
+  }
   h+='<p class="muted">打卡需要拍照和定位，请在提示时选择「允许」。打卡时间以服务器为准。</p></div>';
   hrTimer=setInterval(()=>{const e=$('hrNow');if(e)e.textContent=klHM(Date.now())},20000);
   return h+monthCard(me.id);
@@ -743,9 +755,35 @@ function monthBar(){return '<input type="month" style="width:auto;margin:0" valu
 async function setMonth(v){if(!v)return;hrMonth=v;await guard(async()=>{await loadHR();renderHR()})}
 function monthCard(uid){
   const rs=H.records.filter(r=>r.user_id===uid&&r.work_date.startsWith(hrMonth)),T={late:0,early:0,ot:0,rest:0};
-  const rows=rs.map(r=>{const c=calc(r);for(const k in T)T[k]+=c[k];return '<tr><td>'+r.work_date+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+esc(c.note)+'</td></tr>'}).join('');
-  return '<div class="card"><div class="row between"><h3 style="margin:0">我的出勤</h3>'+monthBar()+'</div><p class="muted">'+rs.length+' 天 · 迟到 '+hm(T.late)+' · 早退 '+hm(T.early)+' · OT '+hm(T.ot)+(T.rest?' · 休息日工时 '+hm(T.rest):'')+'</p><div class="table"><table><tr><th>日期</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th></tr>'+(rows||'<tr><td colspan="8" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
+  const rows=rs.map(r=>{const c=calc(r);for(const k in T)T[k]+=c[k];return '<tr><td>'+r.work_date+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+outCell(r)+'</td><td>'+esc(c.note)+'</td></tr>'}).join('');
+  return '<div class="card"><div class="row between"><h3 style="margin:0">我的出勤</h3>'+monthBar()+'</div><p class="muted">'+rs.length+' 天 · 迟到 '+hm(T.late)+' · 早退 '+hm(T.early)+' · OT '+hm(T.ot)+(T.rest?' · 休息日工时 '+hm(T.rest):'')+'</p><div class="table"><table><tr><th>日期</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>外出</th><th>备注</th></tr>'+(rows||'<tr><td colspan="9" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
 }
+/* ----- 外出 / 回公司（不影响上班、下班打卡）----- */
+const outTxt=o=>klHM(o.out_at)+'-'+(o.back_at?klHM(o.back_at):'未回')+' '+o.reason;
+function outCell(r){
+  const L=(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date);
+  return L.map(o=>'<div class="'+(o.back_at?'':'red')+'" style="white-space:nowrap">'+esc(outTxt(o))+'</div>').join('')||'-';
+}
+const outPlain=r=>(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date).map(outTxt).join('; ');
+function outOpen(){
+  openModal('<h3>🚶 外出</h3><label>外出理由（必填）</label><input id="outR" maxlength="200" placeholder="例如：买文具 / 去银行 / 送货"><div class="row" style="margin-bottom:10px">'+['买东西','银行','送货','见客户'].map(x=>'<button type="button" class="btn secondary" style="padding:6px 10px" onclick="$(\'outR\').value=\''+x+'\'">'+x+'</button>').join('')+'</div><p id="outS" class="muted">确认后会记录外出时间和位置。回来后请点「回公司」。外出不影响上班和下班打卡。</p><div class="row"><button class="btn" onclick="outGo()">确认外出</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+}
+function outGo(){guard(async()=>{
+  const reason=($('outR').value||'').trim();
+  if(reason.length<2){$('outS').textContent='请先写外出理由';return}
+  $('outS').textContent='正在定位…';
+  let pos=null;try{pos=await getPos(10000)}catch(e){}
+  const {error}=await sb.rpc('hr_out_start',{p_reason:reason,p_lat:pos?pos.coords.latitude:null,p_lng:pos?pos.coords.longitude:null,p_accuracy:pos?pos.coords.accuracy:null});
+  if(error){$('outS').textContent=hrErr(error.message);toast(hrErr(error.message));return}
+  closeModal();await loadHR();renderHR();toast('已记录外出，回来请点「回公司」');
+})}
+function backGo(){guard(async()=>{
+  toast('正在定位…');
+  let pos=null;try{pos=await getPos(8000)}catch(e){}
+  const {error}=await sb.rpc('hr_out_back',{p_lat:pos?pos.coords.latitude:null,p_lng:pos?pos.coords.longitude:null,p_accuracy:pos?pos.coords.accuracy:null});
+  if(error){toast(hrErr(error.message));return}
+  await loadHR();renderHR();toast('已回公司');
+})}
 /* ----- 拍照 + 定位 + 打卡 ----- */
 async function camOpen(type){
   camType=type;camPos=null;
@@ -775,26 +813,38 @@ function tabRec(){
   const emps=D.profiles.filter(p=>p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
   const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(!fEmp||r.user_id===fEmp)),S={};
   const rows=rs.map(r=>{const c=calc(r),u=S[r.user_id]=S[r.user_id]||{d:0,n:0,lm:0,ot:0,rest:0,miss:0};u.d++;if(c.late){u.n++;u.lm+=c.late}u.ot+=c.ot;u.rest+=c.rest;if(c.note==='忘记下班打卡')u.miss++;
-    return '<tr><td>'+r.work_date+'</td><td>'+esc(nameOf(r.user_id))+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+esc(c.note)+'</td><td>'+(r.in_distance_m!=null?Math.round(r.in_distance_m)+'m ':'')+mapLink(r.in_lat,r.in_lng)+'</td><td>'+(r.in_selfie?'<a href="#" onclick="selfie(\''+jsAttr(r.in_selfie)+'\');return false">上班</a> ':'')+(r.out_selfie?'<a href="#" onclick="selfie(\''+jsAttr(r.out_selfie)+'\');return false">下班</a>':'')+'</td></tr>'}).join('');
+    return '<tr><td>'+r.work_date+'</td><td>'+esc(nameOf(r.user_id))+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+esc(c.note)+'</td><td>'+outCell(r)+'</td><td>'+(r.in_distance_m!=null?Math.round(r.in_distance_m)+'m ':'')+mapLink(r.in_lat,r.in_lng)+'</td><td>'+(r.in_selfie?'<a href="#" onclick="selfie(\''+jsAttr(r.in_selfie)+'\');return false">上班</a> ':'')+(r.out_selfie?'<a href="#" onclick="selfie(\''+jsAttr(r.out_selfie)+'\');return false">下班</a>':'')+'</td></tr>'}).join('');
   const sr=Object.keys(S).map(id=>{const u=S[id];return '<tr><td>'+esc(nameOf(id))+'</td><td>'+u.d+'</td><td>'+u.n+' 次 / '+hm(u.lm)+'</td><td>'+hm(u.ot)+'</td><td>'+hm(u.rest)+'</td><td>'+u.miss+'</td></tr>'}).join('');
   return '<div class="card"><div class="row between">'+monthBar()+'<select style="width:auto;margin:0" onchange="fEmp=this.value;renderHR()"><option value="">全部员工</option>'+emps.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===fEmp?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></div></div>'+
    '<div class="card"><h3>月度汇总</h3><div class="table"><table><tr><th>员工</th><th>出勤天数</th><th>迟到</th><th>OT</th><th>休息日工时</th><th>忘记下班</th></tr>'+(sr||'<tr><td colspan="6" class="muted">本月没有记录</td></tr>')+'</table></div><p class="muted">OT、迟到按「设置」里的当前规则计算；休息日工时单独列出，未计入 OT。</p></div>'+
-   '<div class="card"><div class="row between"><h3 style="margin:0">明细</h3><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="11" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
+   '<div class="card"><div class="row between"><h3 style="margin:0">明细</h3><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>外出</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="12" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
 }
 function exportRec(){
   const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(!fEmp||r.user_id===fEmp)).slice().sort((a,b)=>a.work_date.localeCompare(b.work_date)||nameOf(a.user_id).localeCompare(nameOf(b.user_id)));
   if(!rs.length){toast('本月没有记录可导出');return}
-  const header=['日期','员工','规则','上班','下班','迟到(分钟)','早退(分钟)','OT(分钟)','休息日工时(分钟)','备注','上班距离(m)','上班GPS'];
-  const rows=rs.map(r=>{const c=calc(r);return [r.work_date,nameOf(r.user_id),r.sched_rule||'',klHM(r.clock_in),klHM(r.clock_out),c.late||0,c.early||0,c.ot||0,c.rest||0,c.note||'',r.in_distance_m!=null?Math.round(r.in_distance_m):'',gpsText(r.in_lat,r.in_lng)]});
+  const header=['日期','员工','规则','上班','下班','迟到(分钟)','早退(分钟)','OT(分钟)','休息日工时(分钟)','备注','外出','上班距离(m)','上班GPS'];
+  const rows=rs.map(r=>{const c=calc(r);return [r.work_date,nameOf(r.user_id),r.sched_rule||'',klHM(r.clock_in),klHM(r.clock_out),c.late||0,c.early||0,c.ot||0,c.rest||0,c.note||'',outPlain(r),r.in_distance_m!=null?Math.round(r.in_distance_m):'',gpsText(r.in_lat,r.in_lng)]});
   dlCSV('AKAIDO-出勤明细-'+hrMonth+(fEmp?'-'+nameOf(fEmp):'')+'.csv',header,rows);
   toast('已导出 '+rs.length+' 条记录');
 }
 /* ----- Admin：员工 ----- */
 const schOpts=sel=>'<option value="">（未设置）</option>'+H.schedules.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.name)+'</option>').join('');
 function tabEmp(){
-  const rows=D.profiles.slice().sort((a,b)=>a.username.localeCompare(b.username)).map(p=>'<tr'+(p.active?'':' style="opacity:.55"')+'><td>'+esc(p.name)+'</td><td>'+esc(p.username)+'</td><td>'+esc(p.role)+'</td><td><a href="#" onclick="setDept(\''+esc(p.id)+'\',\''+jsAttr(p.dept||'')+'\');return false">'+esc(p.dept||'设置')+'</a></td><td><select onchange="setProf(\''+esc(p.id)+'\',{schedule_id:this.value||null})">'+schOpts(p.schedule_id)+'</select></td><td><input type="checkbox" style="width:auto;margin:0" '+(p.track_attendance!==false?'checked':'')+' onchange="setProf(\''+esc(p.id)+'\',{track_attendance:this.checked})"></td><td>'+(p.id===me.id?'':'<button class="btn secondary" style="padding:6px 10px" onclick="if(confirm(\''+(p.active?'停用':'启用')+'这个账号？'+'\'))setProf(\''+esc(p.id)+'\',{active:'+!p.active+'})">'+(p.active?'停用':'启用')+'</button>')+'</td></tr>').join('');
+  const rows=D.profiles.slice().sort((a,b)=>a.username.localeCompare(b.username)).map(p=>'<tr'+(p.active?'':' style="opacity:.55"')+'><td>'+esc(p.name)+'</td><td>'+esc(p.username)+'</td><td>'+esc(p.role)+'</td><td><a href="#" onclick="setDept(\''+esc(p.id)+'\',\''+jsAttr(p.dept||'')+'\');return false">'+esc(p.dept||'设置')+'</a></td><td><select onchange="setProf(\''+esc(p.id)+'\',{schedule_id:this.value||null})">'+schOpts(p.schedule_id)+'</select></td><td><input type="checkbox" style="width:auto;margin:0" '+(p.track_attendance!==false?'checked':'')+' onchange="setProf(\''+esc(p.id)+'\',{track_attendance:this.checked})"></td><td>'+(p.id===me.id?'':'<button class="btn secondary" style="padding:6px 10px" onclick="if(confirm(\''+(p.active?'停用':'启用')+'这个账号？'+'\'))setProf(\''+esc(p.id)+'\',{active:'+!p.active+'})">'+(p.active?'停用':'启用')+'</button>'+(p.role==='staff'?' <button class="btn danger" style="padding:6px 10px;margin-left:6px" onclick="delStaff(\''+esc(p.id)+'\',\''+jsAttr(p.name)+'\')">删除</button>':''))+'</td></tr>').join('');
   return '<div class="card"><h3>员工（含 Sales / Admin）</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>角色</th><th>部门</th><th>Schedule</th><th>考勤</th><th></th></tr>'+rows+'</table></div><p class="muted">「考勤」打勾才需要打卡。停用后无法登录，历史记录保留。</p></div>'+
    '<div class="card"><h3>新增员工账号</h3><label>账号名</label><input id="ne_u" autocapitalize="none" autocorrect="off"><label>姓名</label><input id="ne_n"><label>角色</label><select id="ne_r"><option value="staff">Staff（仓库 / 办公室）</option><option value="sales">Sales</option><option value="admin">Admin</option></select><label>部门</label><input id="ne_d" placeholder="Warehouse / Office"><label>Schedule</label><select id="ne_s">'+schOpts('')+'</select><label>初始密码（至少 8 位）</label><input id="ne_p" type="password"><button class="btn full" onclick="newEmp()">创建账号</button></div>';
+}
+async function delStaff(id,name){
+  if(!isAdmin())return;
+  if(!confirm('永久删除 Staff「'+name+'」？\n\n这个账号和他的全部打卡、外出记录会一起删除，无法恢复。\n（只想让他不能登录的话，请用「停用」）'))return;
+  await guard(async()=>{
+    const {error}=await sb.rpc('admin_delete_staff',{p_id:id});
+    if(error){
+      const m=error.message||'';
+      throw new Error(/HAS_CUSTOMERS/.test(m)?'此 Staff 名下还有客户，请先到后台「全部客户与负责人」重新分配给其他人':/ONLY_STAFF/.test(m)?'只能删除 Staff 账号':/CANNOT_DELETE_SELF/.test(m)?'不能删除自己':/Could not find the function/.test(m)?'删除功能还没启用，请先运行 staff-outing-delete.sql':m);
+    }
+    await loadAll();page(cur);toast('已删除');
+  });
 }
 async function setProf(id,patch){await guard(async()=>{const r=await sb.from('profiles').update(patch).eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已保存')})}
 async function setDept(id,cur){const v=prompt('部门',cur);if(v===null)return;await setProf(id,{dept:v.trim()||null})}
