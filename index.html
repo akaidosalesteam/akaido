@@ -273,7 +273,7 @@ function salesTable(){
   return '<div class="card"><h3>👨‍💼 Sales 今日情况</h3><div class="table"><table><tr><th>Sales</th><th>今日打卡</th><th>今日拜访</th><th>客户数</th><th>潜在订单</th></tr>'+rows+'</table></div></div>';
 }
 async function changePassword(){
-  const a=$('pw1').value,b=$('pw2').value;
+  const box=$(cur),a=box.querySelector('#pw1').value,b=box.querySelector('#pw2').value;  // 首页和考勤页各有一组 pw1/pw2，只读当前页面这一组
   if(a.length<8){toast('新密码至少 8 位');return}
   if(a!==b){toast('两次输入的密码不一致');return}
   if(a==='123456'){toast('不能继续使用 123456');return}
