@@ -761,15 +761,15 @@ function tabMine(){
     const outNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind!=='lunch'),lunchNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind==='lunch'),lunchDone=(H.todayOuts||[]).find(o=>o.kind==='lunch'&&o.back_at);
     h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow||lunchNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
     if(H.outOk&&rc&&!rc.clock_out&&!outNow){
-      if(lunchNow)h+='<div class="banner" style="margin-top:8px">🍱 午休中 · 开始 '+klHM(lunchNow.out_at)+'<br>已午休 <b id="lunchT" data-t="'+esc(lunchNow.out_at)+'">'+lunchTxt(lunchNow.out_at)+'</b></div><div class="row"><button class="btn" onclick="lunchEnd()">🍱 午休结束</button></div>';
+      if(lunchNow)h+='<div class="banner" style="margin-top:8px">🍱 午休中 · 开始 '+klHM(lunchNow.out_at)+'<br>已午休 <b id="lunchT" data-t="'+esc(lunchNow.out_at)+'">'+lunchTxt(lunchNow.out_at)+'</b></div><div class="row"><button class="btn" onclick="lunchEnd()">🍱 午休结束</button></div><p class="muted" style="margin:6px 0 0">要回到公司范围内才能按。</p>';
       else if(!lunchDone)h+='<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="lunchStart()">🍱 午休开始</button></div>';
       else h+='<p class="muted" style="margin:8px 0 0">今天午休：'+klHM(lunchDone.out_at)+' - '+klHM(lunchDone.back_at)+'（'+lunchTxt(lunchDone.out_at,lunchDone.back_at)+'）</p>';
     }
-    if(H.outOk&&rc&&!rc.clock_out&&!lunchNow)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">你正在外出中（'+klHM(outNow.out_at)+' 起）。回来后请点「回公司」，回公司前不能下班打卡。</p>':'');
+    if(H.outOk&&rc&&!rc.clock_out&&!lunchNow)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">你正在外出中（'+klHM(outNow.out_at)+' 起）。回来后请点「回公司」（要在公司范围内才能按），回公司前不能下班打卡。</p>':'');
     if(H.outOk&&rc&&!rc.clock_out&&outNow)h+='<div class="row" style="margin-top:8px"><button class="btn danger" onclick="if(confirm(\'确定外出后直接下班（不回公司）？\'))camOpen(\'outend\')">🏠 外出后直接下班</button></div><p class="muted" style="margin:6px 0 0">外出办事后不回公司、直接下班，按这里。不用拍照，只记录定位。</p>';
     if(H.todayOuts&&H.todayOuts.length)h+='<div class="muted" style="margin-top:8px">今日外出：'+H.todayOuts.map(o=>'<br>'+klHM(o.out_at)+' - '+(o.back_at?klHM(o.back_at):'<span class="red">未回</span>')+' · '+esc(o.reason)+(o.kind==='lunch'&&o.back_at?'（'+lunchTxt(o.out_at,o.back_at)+'）':'')).join('')+'</div>';
   }
-  h+='<p class="muted">只有每天第一次「上班打卡」要拍照，其余打卡（下班、回来上班等）只记录定位。请在提示时选择「允许」。打卡时间以服务器为准。'+(H.settings.lunch_auto!==false&&H.settings.lunch_start&&H.settings.lunch_end?'<br>午休 '+esc(String(H.settings.lunch_start).slice(0,5))+' 起系统会自动帮你打下班卡，回来请自己按「回来上班」。':'')+'</p></div>';
+  h+='<p class="muted">只有每天第一次「上班打卡」要拍照，其余打卡（下班、午休、外出等）只记录定位。请在提示时选择「允许」。打卡时间以服务器为准。</p></div>';
   hrTimer=setInterval(()=>{const e=$('hrNow');if(e)e.textContent=klHM(Date.now());const l=$('lunchT');if(l)l.textContent=lunchTxt(l.dataset.t)},10000);
   return h+monthCard(me.id);
 }
@@ -785,12 +785,21 @@ const lunchTxt=(a,b)=>{const m=Math.max(0,Math.floor(((b?new Date(b):Date.now())
 async function lunchCall(fn,okMsg){await guard(async()=>{toast('正在获取 GPS…');let p;try{p=await getPos(15000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}const {error}=await sb.rpc(fn,{p_lat:p.coords.latitude,p_lng:p.coords.longitude,p_accuracy:p.coords.accuracy});if(error){toast(hrErr(error.message));return}await loadHR();renderHR();toast(okMsg+' '+klHM(Date.now()))})}
 const lunchStart=()=>lunchCall('hr_lunch_start','午休开始');
 const lunchEnd=()=>lunchCall('hr_lunch_end','午休结束');
+const mapUrl=(lat,lng)=>'https://www.google.com/maps?q='+Number(lat)+','+Number(lng);
+const hasPos=(a,b)=>a!=null&&b!=null;
+const posLinks=o=>{
+  const a=hasPos(o.out_lat,o.out_lng)?'<a target="_blank" rel="noopener" href="'+mapUrl(o.out_lat,o.out_lng)+'">出发</a>':'';
+  const b=hasPos(o.back_lat,o.back_lng)?'<a target="_blank" rel="noopener" href="'+mapUrl(o.back_lat,o.back_lng)+'">回来</a>':'';
+  return (a||b)?' <small>📍'+[a,b].filter(Boolean).join(' · ')+'</small>':'';
+};
+const posPlain=o=>[hasPos(o.out_lat,o.out_lng)?'出发 '+mapUrl(o.out_lat,o.out_lng):'',hasPos(o.back_lat,o.back_lng)?'回来 '+mapUrl(o.back_lat,o.back_lng):''].filter(Boolean).join(' ');
 const outTxt=o=>(o.kind==='lunch'?'🍱 ':'')+klHM(o.out_at)+'-'+(o.back_at?klHM(o.back_at):'未回')+' '+o.reason+(o.kind==='lunch'&&o.back_at?'（'+lunchTxt(o.out_at,o.back_at)+'）':'');
 function outCell(r){
   const L=(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date);
-  return L.map(o=>'<div class="'+(o.back_at?'':'red')+'" style="white-space:nowrap">'+esc(outTxt(o))+'</div>').join('')||'-';
+  return L.map(o=>'<div class="'+(o.back_at?'':'red')+'" style="white-space:nowrap">'+esc(outTxt(o))+(isAdmin()?posLinks(o):'')+'</div>').join('')||'-';
 }
 const outPlain=r=>(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date).map(outTxt).join('; ');
+const outPos=r=>(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date).map(o=>klHM(o.out_at)+' '+(posPlain(o)||'无位置')).join('; ');
 function outOpen(){
   openModal('<h3>🚶 外出</h3><label>外出理由（必填）</label><input id="outR" maxlength="200" placeholder="例如：买文具 / 去银行 / 送货"><div class="row" style="margin-bottom:10px">'+['买东西','银行','送货','见客户'].map(x=>'<button type="button" class="btn secondary" style="padding:6px 10px" onclick="$(\'outR\').value=\''+x+'\'">'+x+'</button>').join('')+'</div><p id="outS" class="muted">确认后会记录外出时间和位置。回来后请点「回公司」。外出不影响上班和下班打卡。</p><div class="row"><button class="btn" onclick="outGo()">确认外出</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
 }
@@ -805,8 +814,8 @@ function outGo(){guard(async()=>{
 })}
 function backGo(){guard(async()=>{
   toast('正在定位…');
-  let pos=null;try{pos=await getPos(8000)}catch(e){}
-  const {error}=await sb.rpc('hr_out_back',{p_lat:pos?pos.coords.latitude:null,p_lng:pos?pos.coords.longitude:null,p_accuracy:pos?pos.coords.accuracy:null});
+  let pos;try{pos=await getPos(15000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}   // 回公司必须有定位，并且要在公司范围内
+  const {error}=await sb.rpc('hr_out_back',{p_lat:pos.coords.latitude,p_lng:pos.coords.longitude,p_accuracy:pos.coords.accuracy});
   if(error){toast(hrErr(error.message));return}
   await loadHR();renderHR();toast('已回公司');
 })}
@@ -870,8 +879,8 @@ function exportRec(mine){
   if(mine&&!canDl()){toast('没有下载权限');return}
   const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(mine?r.user_id===me.id:(!fEmp||r.user_id===fEmp))).slice().sort((a,b)=>a.work_date.localeCompare(b.work_date)||nameOf(a.user_id).localeCompare(nameOf(b.user_id)));
   if(!rs.length){toast('本月没有记录可导出');return}
-  const header=['日期','员工','规则','上班','下班','迟到(分钟)','早退(分钟)','OT(分钟)','休息日工时(分钟)','备注','外出','上班距离(m)','上班GPS'];
-  const rows=rs.map(r=>{const c=calc(r);return [r.work_date,nameOf(r.user_id),r.sched_rule||'',klHM(r.clock_in),klHM(r.clock_out),c.late||0,c.early||0,c.ot||0,c.rest||0,noteOf(r,c),outPlain(r),r.in_distance_m!=null?Math.round(r.in_distance_m):'',gpsText(r.in_lat,r.in_lng)]});
+  const header=['日期','员工','规则','上班','下班','迟到(分钟)','早退(分钟)','OT(分钟)','休息日工时(分钟)','备注','外出','外出位置（地图链接）','上班距离(m)','上班GPS'];
+  const rows=rs.map(r=>{const c=calc(r);return [r.work_date,nameOf(r.user_id),r.sched_rule||'',klHM(r.clock_in),klHM(r.clock_out),c.late||0,c.early||0,c.ot||0,c.rest||0,noteOf(r,c),outPlain(r),outPos(r),r.in_distance_m!=null?Math.round(r.in_distance_m):'',gpsText(r.in_lat,r.in_lng)]});
   dlCSV('AKAIDO-出勤明细-'+hrMonth+(mine?'-'+nameOf(me.id):(fEmp?'-'+nameOf(fEmp):''))+'.csv',header,rows);
   toast('已导出 '+rs.length+' 条记录');
 }
@@ -925,17 +934,14 @@ async function schDel(id){if(!confirm('删除后，使用这个 Schedule 的员�
 function tabSet(){
   const s=H.settings;
   const rows=H.locations.map(l=>'<tr><td>'+esc(l.name)+'</td><td>'+gpsText(l.lat,l.lng)+'</td><td><input type="number" min="10" style="width:72px;margin:0;padding:6px" value="'+l.radius_m+'" onchange="lcSet(\''+esc(l.id)+'\',{radius_m:Math.max(10,parseInt(this.value,10)||150)})">m</td><td><input type="checkbox" style="width:auto;margin:0" '+(l.active?'checked':'')+' onchange="lcSet(\''+esc(l.id)+'\',{active:this.checked})"></td><td><button class="btn danger" style="padding:6px 10px" onclick="lcDel(\''+esc(l.id)+'\')">删除</button></td></tr>').join('');
-  return '<div class="card"><h3>OT 与迟到设置</h3><label>OT 宽限（分钟）：下班后超过这个时间才开始算 OT，宽限的时间会被扣掉</label><input id="st_g" type="number" min="0" value="'+s.ot_grace_min+'"><label>OT 计算单位</label><select id="st_u">'+[['exact','精确分钟'],['30','30 分钟'],['60','1 小时']].map(o=>'<option value="'+o[0]+'"'+(s.ot_unit===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select><label>迟到宽限（分钟）</label><input id="st_l" type="number" min="0" value="'+s.late_grace_min+'"><label>提早下班免写理由的宽限（分钟）：比下班时间早不超过这个分钟数，不用写理由</label><input id="st_e" type="number" min="0" value="'+(s.early_grace_min==null?2:s.early_grace_min)+'"><label><input type="checkbox" id="st_la" style="width:auto;margin:0 6px 0 0" '+(s.lunch_auto!==false?'checked':'')+'>午休自动下班（到午休开始时间，系统自动帮已上班的员工打下班卡）</label><div class="row"><div style="flex:1"><label>午休开始</label><input id="st_ls" type="time" value="'+esc(String(s.lunch_start||'13:00').slice(0,5))+'"></div><div style="flex:1"><label>午休结束</label><input id="st_le" type="time" value="'+esc(String(s.lunch_end||'14:00').slice(0,5))+'"></div></div><p class="muted">只对当天要上班到午休结束之后的人生效（星期六半天班不会被自动下班）。员工回来后自己按「回来上班」，不用拍照。</p><label><input type="checkbox" id="st_f" style="width:auto;margin:0 6px 0 0" '+(s.enforce_geofence?'checked':'')+'>强制 GPS 围栏（范围外不能打卡）</label><button class="btn full" onclick="setSave()">保存设置</button></div>'+
+  return '<div class="card"><h3>OT 与迟到设置</h3><label>OT 宽限（分钟）：下班后超过这个时间才开始算 OT，宽限的时间会被扣掉</label><input id="st_g" type="number" min="0" value="'+s.ot_grace_min+'"><label>OT 计算单位</label><select id="st_u">'+[['exact','精确分钟'],['30','30 分钟'],['60','1 小时']].map(o=>'<option value="'+o[0]+'"'+(s.ot_unit===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select><label>迟到宽限（分钟）</label><input id="st_l" type="number" min="0" value="'+s.late_grace_min+'"><label>提早下班免写理由的宽限（分钟）：比下班时间早不超过这个分钟数，不用写理由</label><input id="st_e" type="number" min="0" value="'+(s.early_grace_min==null?2:s.early_grace_min)+'"><label><input type="checkbox" id="st_f" style="width:auto;margin:0 6px 0 0" '+(s.enforce_geofence?'checked':'')+'>强制 GPS 围栏（范围外不能打卡）</label><button class="btn full" onclick="setSave()">保存设置</button></div>'+
    '<div class="card"><h3>打卡地点</h3><div class="table"><table><tr><th>名称</th><th>坐标</th><th>半径</th><th>启用</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有地点，目前不检查 GPS 围栏</td></tr>')+'</table></div><label>名称</label><input id="lc_n" placeholder="AKAIDO Office"><div class="row"><div style="flex:1"><label>纬度</label><input id="lc_a" inputmode="decimal"></div><div style="flex:1"><label>经度</label><input id="lc_o" inputmode="decimal"></div></div><label>半径（米，建议 100–200）</label><input id="lc_r" type="number" value="150"><div class="row"><button class="btn secondary" onclick="lcHere()">📍 用我现在的位置</button><button class="btn" onclick="lcAdd()">新增地点</button></div><p class="muted">人站在公司里点「用我现在的位置」最准确。</p></div>';
 }
 async function setSave(){await guard(async()=>{
   const base={ot_grace_min:Math.max(0,+$('st_g').value||0),ot_unit:$('st_u').value,late_grace_min:Math.max(0,+$('st_l').value||0),early_grace_min:Math.max(0,+$('st_e').value||0),enforce_geofence:$('st_f').checked};
-  const lunch={lunch_auto:$('st_la').checked,lunch_start:$('st_ls').value||'13:00',lunch_end:$('st_le').value||'14:00'};
-  if(lunch.lunch_start>=lunch.lunch_end){toast('午休结束时间必须晚于开始时间');return}
-  let r=await sb.from('hr_settings').update({...base,...lunch}).eq('id',1),skipped=false;
-  if(r.error&&/lunch_/.test(r.error.message||'')){skipped=true;r=await sb.from('hr_settings').update(base).eq('id',1)}   // 午休字段还没建：其他设置照常保存
+  const r=await sb.from('hr_settings').update(base).eq('id',1);
   if(r.error)throw r.error;
-  await loadHR();renderHR();toast(skipped?'其他设置已保存，午休设置需要先运行 lunch-one-photo.sql':'设置已保存');
+  await loadHR();renderHR();toast('设置已保存');
 })}
 async function lcHere(){await guard(async()=>{toast('正在获取 GPS…');let p;try{p=await getPos(15000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}$('lc_a').value=p.coords.latitude.toFixed(6);$('lc_o').value=p.coords.longitude.toFixed(6);toast('已填入，精度约 '+Math.round(p.coords.accuracy)+' 米')})}
 async function lcAdd(){
