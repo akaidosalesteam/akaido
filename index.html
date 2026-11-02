@@ -731,7 +731,7 @@ function calc(r){
 function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
 function stopCam(){if(cam){cam.getTracks().forEach(t=>t.stop());cam=null}}
 function closeModal(){stopCam();$('modal').classList.add('hidden');$('modalBox').innerHTML=''}
-const hrErr=m=>{m=m||'';return /DEVICE_/.test(m)?'此手机还没有被管理员批准，暂时不能打卡':/REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
+const hrErr=m=>{m=m||'';return /DEVICE_/.test(m)?'此手机还没有被管理员批准，暂时不能打卡':/NOT_CLOCKED_OUT/.test(m)?'今天还没有下班打卡，不需要回来上班':/RESUME_TOO_LATE/.test(m)?'下班已超过 4 小时，不能再回来上班，请联系管理员':/REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
 
 function renderHR(){
   clearInterval(hrTimer);
@@ -752,7 +752,9 @@ function tabMine(){
   else{
     const outNow=(H.todayOuts||[]).find(o=>!o.back_at);
     h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
+    if(H.outOk&&rc&&rc.clock_out&&Date.now()-new Date(rc.clock_out)<4*3600e3)h+='<div class="row" style="margin-top:8px"><button class="btn" onclick="if(confirm(\'确定回来上班？之后要再按一次下班打卡。\'))camOpen(\'resume\')">🍱 回来上班（午休后）</button></div><p class="muted" style="margin:6px 0 0">下班打卡后还要回来上班，按这里。中间这段会记成一次外出（午休）。</p>';
     if(H.outOk&&rc&&!rc.clock_out)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">你正在外出中（'+klHM(outNow.out_at)+' 起）。回来后请点「回公司」，回公司前不能下班打卡。</p>':'');
+    if(H.outOk&&rc&&!rc.clock_out&&outNow)h+='<div class="row" style="margin-top:8px"><button class="btn danger" onclick="if(confirm(\'确定外出后直接下班（不回公司）？\'))camOpen(\'outend\')">🏠 外出后直接下班</button></div><p class="muted" style="margin:6px 0 0">外出办事后不回公司、直接下班，按这里。要拍照和定位。</p>';
     if(H.todayOuts&&H.todayOuts.length)h+='<div class="muted" style="margin-top:8px">今日外出：'+H.todayOuts.map(o=>'<br>'+klHM(o.out_at)+' - '+(o.back_at?klHM(o.back_at):'<span class="red">未回</span>')+' · '+esc(o.reason)).join('')+'</div>';
   }
   h+='<p class="muted">打卡需要拍照和定位，请在提示时选择「允许」。打卡时间以服务器为准。</p></div>';
@@ -795,7 +797,7 @@ function backGo(){guard(async()=>{
 /* ----- 拍照 + 定位 + 打卡 ----- */
 async function camOpen(type){
   camType=type;camPos=null;
-  openModal('<h3>'+(type==='in'?'上班':'下班')+'打卡</h3><video id="camV" autoplay playsinline muted style="width:100%;border-radius:10px;background:#000;transform:scaleX(-1)"></video><p id="camS" class="muted">正在启动摄像头和定位…</p><div class="row"><button id="camB" class="btn" disabled onclick="camShot()">📸 拍照并打卡</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+  openModal('<h3>'+({in:'上班打卡',out:'下班打卡',resume:'回来上班',outend:'外出后直接下班'}[type])+'</h3><video id="camV" autoplay playsinline muted style="width:100%;border-radius:10px;background:#000;transform:scaleX(-1)"></video><p id="camS" class="muted">正在启动摄像头和定位…</p><div class="row"><button id="camB" class="btn" disabled onclick="camShot()">📸 拍照并打卡</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
   try{cam=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640}},audio:false})}
   catch(e){if($('camS'))$('camS').textContent='无法打开摄像头：请允许相机权限（需要 HTTPS 网址）';return}
   if(!$('camV')){stopCam();return}
@@ -811,9 +813,9 @@ function camShot(){guard(async()=>{
   const path=me.id+'/'+klDate(Date.now())+'-'+Date.now()+'-'+camType+'.jpg';
   $('camS').textContent='上传中…';
   const up=await sb.storage.from('clock-selfies').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw up.error;
-  const {error}=await sb.rpc(camType==='in'?'hr_clock_in':'hr_clock_out',{p_lat:camPos.coords.latitude,p_lng:camPos.coords.longitude,p_accuracy:camPos.coords.accuracy,p_selfie:path});
+  const {error}=await sb.rpc(({in:'hr_clock_in',out:'hr_clock_out',resume:'hr_clock_resume',outend:'hr_clock_out_away'})[camType],{p_lat:camPos.coords.latitude,p_lng:camPos.coords.longitude,p_accuracy:camPos.coords.accuracy,p_selfie:path});
   if(error){$('camS').textContent=hrErr(error.message);toast(hrErr(error.message));return}
-  closeModal();await loadHR();renderHR();toast(camType==='in'?'上班打卡成功':'下班打卡成功');
+  closeModal();await loadHR();renderHR();toast(camType==='in'?'上班打卡成功':(camType==='out'||camType==='outend')?'下班打卡成功':'已回来上班');
 })}
 async function selfie(p){const {data,error}=await sb.storage.from('clock-selfies').createSignedUrl(p,300);if(error){toast('无法读取照片');return}openModal('<img src="'+esc(data.signedUrl)+'" style="width:100%;border-radius:10px;margin-bottom:8px"><button class="btn full" onclick="closeModal()">关闭</button>')}
 /* ----- Admin：出勤记录 ----- */
