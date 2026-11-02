@@ -739,7 +739,7 @@ function calc(r){
 function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
 function stopCam(){if(cam){cam.getTracks().forEach(t=>t.stop());cam=null}}
 function closeModal(){stopCam();$('modal').classList.add('hidden');$('modalBox').innerHTML=''}
-const hrErr=m=>{m=m||'';return /DEVICE_/.test(m)?'此手机还没有被管理员批准，暂时不能打卡':/NOT_CLOCKED_OUT/.test(m)?'今天还没有下班打卡，不需要回来上班':/RESUME_TOO_LATE/.test(m)?'下班已超过 4 小时，不能再回来上班，请联系管理员':/EARLY_REASON_REQUIRED/.test(m)?'提早下班需要填写理由':/REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
+const hrErr=m=>{m=m||'';return /DEVICE_/.test(m)?'此手机还没有被管理员批准，暂时不能打卡':/NOT_CLOCKED_OUT/.test(m)?'今天还没有下班打卡，不需要回来上班':/RESUME_TOO_LATE/.test(m)?'下班已超过 4 小时，不能再回来上班，请联系管理员':/LUNCH_ALREADY/.test(m)?'今天已经午休过了':/NOT_LUNCH/.test(m)?'目前没有进行中的午休':/AWAY_NO_RESUME/.test(m)?'外出后直接下班，今天不能再回来上班':/EARLY_REASON_REQUIRED/.test(m)?'提早下班需要填写理由':/REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
 
 function renderHR(){
   clearInterval(hrTimer);
@@ -758,15 +758,19 @@ function tabMine(){
   if(me.track_attendance===false)h+='<div class="muted">此账号不需要考勤打卡</div>';
   else if(me.devState==='pending'||me.devState==='revoked'){h+='<div class="banner">📱 '+(me.devState==='pending'?'此手机还没有被管理员批准，所以暂时不能打卡。请联系管理员批准后，再点下面的「重新检查」。':'这部手机的绑定已被取消，请联系管理员。')+'</div><button class="btn secondary" onclick="recheckDev()">重新检查</button>'}
   else{
-    const outNow=(H.todayOuts||[]).find(o=>!o.back_at);
-    h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
-    if(H.outOk&&rc&&rc.clock_out&&Date.now()-new Date(rc.clock_out)<4*3600e3)h+=(rc.auto_out?'<div class="banner" style="margin-top:8px">🍱 系统已在 '+klHM(rc.clock_out)+' 自动午休下班。回来后请按下面的「回来上班」，不用拍照。</div>':'')+'<div class="row" style="margin-top:8px"><button class="btn" onclick="if(confirm(\'确定回来上班？之后要再按一次下班打卡。\'))camOpen(\'resume\')">🍱 回来上班（午休后）</button></div><p class="muted" style="margin:6px 0 0">'+(rc.auto_out?'系统会自动检查你是否在公司范围内。':'下班打卡后还要回来上班，按这里。')+'中间这段会记成一次外出（午休）。</p>';
-    if(H.outOk&&rc&&!rc.clock_out)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">你正在外出中（'+klHM(outNow.out_at)+' 起）。回来后请点「回公司」，回公司前不能下班打卡。</p>':'');
+    const outNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind!=='lunch'),lunchNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind==='lunch'),lunchDone=(H.todayOuts||[]).find(o=>o.kind==='lunch'&&o.back_at);
+    h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow||lunchNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
+    if(H.outOk&&rc&&!rc.clock_out&&!outNow){
+      if(lunchNow)h+='<div class="banner" style="margin-top:8px">🍱 午休中 · 开始 '+klHM(lunchNow.out_at)+'<br>已午休 <b id="lunchT" data-t="'+esc(lunchNow.out_at)+'">'+lunchTxt(lunchNow.out_at)+'</b></div><div class="row"><button class="btn" onclick="lunchEnd()">🍱 午休结束</button></div>';
+      else if(!lunchDone)h+='<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="lunchStart()">🍱 午休开始</button></div>';
+      else h+='<p class="muted" style="margin:8px 0 0">今天午休：'+klHM(lunchDone.out_at)+' - '+klHM(lunchDone.back_at)+'（'+lunchTxt(lunchDone.out_at,lunchDone.back_at)+'）</p>';
+    }
+    if(H.outOk&&rc&&!rc.clock_out&&!lunchNow)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">你正在外出中（'+klHM(outNow.out_at)+' 起）。回来后请点「回公司」，回公司前不能下班打卡。</p>':'');
     if(H.outOk&&rc&&!rc.clock_out&&outNow)h+='<div class="row" style="margin-top:8px"><button class="btn danger" onclick="if(confirm(\'确定外出后直接下班（不回公司）？\'))camOpen(\'outend\')">🏠 外出后直接下班</button></div><p class="muted" style="margin:6px 0 0">外出办事后不回公司、直接下班，按这里。不用拍照，只记录定位。</p>';
-    if(H.todayOuts&&H.todayOuts.length)h+='<div class="muted" style="margin-top:8px">今日外出：'+H.todayOuts.map(o=>'<br>'+klHM(o.out_at)+' - '+(o.back_at?klHM(o.back_at):'<span class="red">未回</span>')+' · '+esc(o.reason)).join('')+'</div>';
+    if(H.todayOuts&&H.todayOuts.length)h+='<div class="muted" style="margin-top:8px">今日外出：'+H.todayOuts.map(o=>'<br>'+klHM(o.out_at)+' - '+(o.back_at?klHM(o.back_at):'<span class="red">未回</span>')+' · '+esc(o.reason)+(o.kind==='lunch'&&o.back_at?'（'+lunchTxt(o.out_at,o.back_at)+'）':'')).join('')+'</div>';
   }
   h+='<p class="muted">只有每天第一次「上班打卡」要拍照，其余打卡（下班、回来上班等）只记录定位。请在提示时选择「允许」。打卡时间以服务器为准。'+(H.settings.lunch_auto!==false&&H.settings.lunch_start&&H.settings.lunch_end?'<br>午休 '+esc(String(H.settings.lunch_start).slice(0,5))+' 起系统会自动帮你打下班卡，回来请自己按「回来上班」。':'')+'</p></div>';
-  hrTimer=setInterval(()=>{const e=$('hrNow');if(e)e.textContent=klHM(Date.now())},20000);
+  hrTimer=setInterval(()=>{const e=$('hrNow');if(e)e.textContent=klHM(Date.now());const l=$('lunchT');if(l)l.textContent=lunchTxt(l.dataset.t)},10000);
   return h+monthCard(me.id);
 }
 function monthBar(){return '<input type="month" style="width:auto;margin:0" value="'+hrMonth+'" onchange="setMonth(this.value)">'}
@@ -777,7 +781,11 @@ function monthCard(uid){
   return '<div class="card"><div class="row between"><h3 style="margin:0">我的出勤</h3>'+monthBar()+(canDl()?'<button class="btn secondary" style="padding:6px 12px" onclick="exportRec(true)">⬇ 下载本月明细</button>':'')+'</div><p class="muted">'+rs.length+' 天 · 迟到 '+hm(T.late)+' · 早退 '+hm(T.early)+' · OT '+hm(T.ot)+(T.rest?' · 休息日工时 '+hm(T.rest):'')+'</p><div class="table"><table><tr><th>日期</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>外出</th><th>备注</th></tr>'+(rows||'<tr><td colspan="9" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
 }
 /* ----- 外出 / 回公司（不影响上班、下班打卡）----- */
-const outTxt=o=>klHM(o.out_at)+'-'+(o.back_at?klHM(o.back_at):'未回')+' '+o.reason;
+const lunchTxt=(a,b)=>{const m=Math.max(0,Math.floor(((b?new Date(b):Date.now())-new Date(a))/60000));return Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m'};
+async function lunchCall(fn,okMsg){await guard(async()=>{toast('正在获取 GPS…');let p;try{p=await getPos(15000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}const {error}=await sb.rpc(fn,{p_lat:p.coords.latitude,p_lng:p.coords.longitude,p_accuracy:p.coords.accuracy});if(error){toast(hrErr(error.message));return}await loadHR();renderHR();toast(okMsg+' '+klHM(Date.now()))})}
+const lunchStart=()=>lunchCall('hr_lunch_start','午休开始');
+const lunchEnd=()=>lunchCall('hr_lunch_end','午休结束');
+const outTxt=o=>(o.kind==='lunch'?'🍱 ':'')+klHM(o.out_at)+'-'+(o.back_at?klHM(o.back_at):'未回')+' '+o.reason+(o.kind==='lunch'&&o.back_at?'（'+lunchTxt(o.out_at,o.back_at)+'）':'');
 function outCell(r){
   const L=(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date);
   return L.map(o=>'<div class="'+(o.back_at?'':'red')+'" style="white-space:nowrap">'+esc(outTxt(o))+'</div>').join('')||'-';
