@@ -292,7 +292,7 @@ function getPos(timeout){
     navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:timeout||12000,maximumAge:0});
   });
 }
-function geoMsg(e){return e&&e.code===1?'请允许网页使用定位权限':e&&e.code===2?'无法确定位置，请到信号好的地方重试':e&&e.code===3?'定位超时，请重试':'此浏览器不支持定位（需要 HTTPS 网址）'}
+function geoMsg(e){return e&&e.code===1?'请允许网页使用定位权限':e&&e.code===2?'定位失败，请到信号好的地方重试':e&&e.code===3?'定位超时，请重试':'此浏览器不支持定位'}
 let ckDate=ymd();
 function onDate(x,d){return ymd(new Date(x))===d}
 function filterCheckin(){ckDate=$('ckDate').value||ymd();renderCheckinBody()}
@@ -661,7 +661,7 @@ async function createUserAccount(){
   const name=($('nu_name').value||'').trim();
   const role=$('nu_role').value;
   const pass=$('nu_pass').value;
-  if(!/^[a-z0-9_]{3,20}$/.test(username)){toast('账号名只能用小写字母、数字、下划线，3-20 位');return}
+  if(!/^[a-z0-9_]{3,20}$/.test(username)){toast('账号名：3-20 位小写字母、数字或下划线');return}
   if(!name){toast('请填写姓名');return}
   if(pass.length<8){toast('密码至少 8 位');return}
   if(role==='admin'&&!isSuper()){toast('只有主 Admin（账号 admin）可以新增 Admin');return}
@@ -740,7 +740,35 @@ function calc(r){
 function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
 function stopCam(){if(cam){cam.getTracks().forEach(t=>t.stop());cam=null}}
 function closeModal(){stopCam();$('modal').classList.add('hidden');$('modalBox').innerHTML=''}
-const hrErr=m=>{m=m||'';return /DEVICE_/.test(m)?'此手机还没有被管理员批准，暂时不能打卡':/NOT_CLOCKED_OUT/.test(m)?'今天还没有下班打卡，不需要回来上班':/RESUME_TOO_LATE/.test(m)?'下班已超过 4 小时，不能再回来上班，请联系管理员':/LUNCH_ALREADY/.test(m)?'今天已经午休过了':/NOT_LUNCH/.test(m)?'目前没有进行中的午休':/AWAY_NO_RESUME/.test(m)?'外出后直接下班，今天不能再回来上班':/EARLY_REASON_REQUIRED/.test(m)?'提早下班需要填写理由':/REASON_REQUIRED/.test(m)?'请先写外出理由':/ALREADY_OUT/.test(m)?'你已经是外出状态，请先点「回公司」':/NOT_OUT/.test(m)?'目前没有未回公司的外出记录':/hr_out_|Could not find the function/.test(m)?'外出功能还没启用，请联系管理员':/OUT_OF_FENCE/.test(m)?'不在打卡范围内：'+m.replace(/^.*OUT_OF_FENCE:\s*/,''):/ALREADY_CLOCKED_IN/.test(m)?'今天已经上班打卡了':/NOT_CLOCKED_IN/.test(m)?'请先上班打卡，或今天已经下班打卡':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能打卡，请联系管理员':'打卡失败：'+m};
+const hrErr=m=>{
+  m=String(m||'');
+  const lunchOpen=(H.todayOuts||[]).some(o=>!o.back_at&&o.kind==='lunch');
+  const fence=()=>{const d=/约\s*(\d+)\s*米/.exec(m);return d?'不在公司范围内（约 '+d[1]+' 米）':'不在公司范围内'};
+  const rules=[
+    [/Could not find the function/,'此功能还没启用，请联系管理员'],
+    [/DEVICE_REQUIRED/,'读取不到手机信息，请用 Chrome 或 Safari 的正常窗口打开'],
+    [/DEVICE_/,'此手机还未获批准，请联系管理员'],
+    [/NOT_LOGGED_IN/,'登录已过期，请重新登录'],
+    [/GPS_REQUIRED/,'取不到定位，请打开手机定位'],
+    [/SELFIE_REQUIRED/,'拍照没成功，请重试'],
+    [/OUT_OF_FENCE/,fence],
+    [/NOT_CLOCKED_IN_OR_ALREADY_OUT/,'还没上班，或已经下班了'],
+    [/NOT_CLOCKED_OUT/,'还没下班，不用回来上班'],
+    [/RESUME_TOO_LATE/,'下班超过 4 小时，请联系管理员'],
+    [/AWAY_NO_RESUME/,'已外出后直接下班，不能再上班'],
+    [/EARLY_REASON_REQUIRED/,'提早下班请写理由'],
+    [/REASON_REQUIRED/,'请写外出理由'],
+    [/LUNCH_ALREADY/,'今天已午休过'],
+    [/NOT_LUNCH/,'没有进行中的午休'],
+    [/ALREADY_OUT/,lunchOpen?'你正在午休，请先点「午休结束」':'你正在外出，请先点「回公司」'],
+    [/NOT_OUT/,'没有未回公司的外出'],
+    [/ALREADY_CLOCKED_IN/,'今天已上班打卡'],
+    [/NOT_CLOCKED_IN/,'还没上班，或已经下班了'],
+    [/ACCOUNT_NOT_ALLOWED/,'此账号不能打卡，请联系管理员']
+  ];
+  for(const r of rules)if(r[0].test(m))return typeof r[1]==='function'?r[1]():r[1];
+  return '打卡失败：'+m;
+};
 
 function renderHR(){
   clearInterval(hrTimer);
@@ -757,20 +785,20 @@ function tabMine(){
   const t=klDate(Date.now()),s=H.schedules.find(x=>x.id===me.schedule_id),rc=H.today;
   let h='<div class="card"><div class="muted">'+t+' · 马来西亚时间</div><div id="hrNow" style="font-size:38px;font-weight:800">'+klHM(Date.now())+'</div><p class="muted">今日规则：'+(s?esc(s.name)+' · '+esc(ruleOf(s,t)):'未设置 Schedule，请联系管理员')+'<br>上班 '+(rc?klHM(rc.clock_in):'-')+' · 下班 '+(rc&&rc.clock_out?klHM(rc.clock_out):'-')+'</p>';
   if(me.track_attendance===false)h+='<div class="muted">此账号不需要考勤打卡</div>';
-  else if(me.devState==='pending'||me.devState==='revoked'){h+='<div class="banner">📱 '+(me.devState==='pending'?'此手机还没有被管理员批准，所以暂时不能打卡。请联系管理员批准后，再点下面的「重新检查」。':'这部手机的绑定已被取消，请联系管理员。')+'</div><button class="btn secondary" onclick="recheckDev()">重新检查</button>'}
+  else if(me.devState==='pending'||me.devState==='revoked'){h+='<div class="banner">📱 '+(me.devState==='pending'?'此手机还未获批准，暂时不能打卡。请联系管理员，批准后点「重新检查」。':'此手机已被取消绑定，请联系管理员。')+'</div><button class="btn secondary" onclick="recheckDev()">重新检查</button>'}
   else{
     const outNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind!=='lunch'),lunchNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind==='lunch'),lunchDone=(H.todayOuts||[]).find(o=>o.kind==='lunch'&&o.back_at);
     h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow||lunchNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
     if(H.outOk&&rc&&!rc.clock_out&&!outNow){
-      if(lunchNow)h+='<div class="banner" style="margin-top:8px">🍱 午休中 · 开始 '+klHM(lunchNow.out_at)+'<br>已午休 <b id="lunchT" data-t="'+esc(lunchNow.out_at)+'">'+lunchTxt(lunchNow.out_at)+'</b></div><div class="row"><button class="btn" onclick="lunchEnd()">🍱 午休结束</button></div><p class="muted" style="margin:6px 0 0">要回到公司范围内才能按。</p>';
+      if(lunchNow)h+='<div class="banner" style="margin-top:8px">🍱 午休中 · 开始 '+klHM(lunchNow.out_at)+'<br>已午休 <b id="lunchT" data-t="'+esc(lunchNow.out_at)+'">'+lunchTxt(lunchNow.out_at)+'</b></div><div class="row"><button class="btn" onclick="lunchEnd()">🍱 午休结束</button></div><p class="muted" style="margin:6px 0 0">需在公司范围内才能按。</p>';
       else if(!lunchDone)h+='<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="lunchStart()">🍱 午休开始</button></div>';
       else h+='<p class="muted" style="margin:8px 0 0">今天午休：'+klHM(lunchDone.out_at)+' - '+klHM(lunchDone.back_at)+'（'+lunchTxt(lunchDone.out_at,lunchDone.back_at)+'）</p>';
     }
-    if(H.outOk&&rc&&!rc.clock_out&&!lunchNow)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">你正在外出中（'+klHM(outNow.out_at)+' 起）。回来后请点「回公司」（要在公司范围内才能按），回公司前不能下班打卡。</p>':'');
-    if(H.outOk&&rc&&!rc.clock_out&&outNow)h+='<div class="row" style="margin-top:8px"><button class="btn danger" onclick="if(confirm(\'确定外出后直接下班（不回公司）？\'))camOpen(\'outend\')">🏠 外出后直接下班</button></div><p class="muted" style="margin:6px 0 0">外出办事后不回公司、直接下班，按这里。不用拍照，只记录定位。</p>';
+    if(H.outOk&&rc&&!rc.clock_out&&!lunchNow)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">外出中（'+klHM(outNow.out_at)+' 起）。回公司（需在公司范围内）后才能下班。</p>':'');
+    if(H.outOk&&rc&&!rc.clock_out&&outNow)h+='<div class="row" style="margin-top:8px"><button class="btn danger" onclick="if(confirm(\'确定不回公司，直接下班？\'))camOpen(\'outend\')">🏠 外出后直接下班</button></div><p class="muted" style="margin:6px 0 0">不回公司了，直接下班按这里。</p>';
     if(H.todayOuts&&H.todayOuts.length)h+='<div class="muted" style="margin-top:8px">今日外出：'+H.todayOuts.map(o=>'<br>'+klHM(o.out_at)+' - '+(o.back_at?klHM(o.back_at):'<span class="red">未回</span>')+' · '+esc(o.reason)+(o.kind==='lunch'&&o.back_at?'（'+lunchTxt(o.out_at,o.back_at)+'）':'')).join('')+'</div>';
   }
-  h+='<p class="muted">只有每天第一次「上班打卡」要拍照，其余打卡（下班、午休、外出等）只记录定位。请在提示时选择「允许」。打卡时间以服务器为准。</p></div>';
+  h+='<p class="muted">每天只有「上班打卡」要拍照，其余只记录定位。请允许相机和定位。时间以服务器为准。</p></div>';
   hrTimer=setInterval(()=>{const e=$('hrNow');if(e)e.textContent=klHM(Date.now());const l=$('lunchT');if(l)l.textContent=lunchTxt(l.dataset.t)},10000);
   return h+monthCard(me.id);
 }
@@ -802,16 +830,16 @@ function outCell(r){
 const outPlain=r=>(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date).map(outTxt).join('; ');
 const outPos=r=>(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date).map(o=>klHM(o.out_at)+' '+(posPlain(o)||'无位置')).join('; ');
 function outOpen(){
-  openModal('<h3>🚶 外出</h3><label>外出理由（必填）</label><input id="outR" maxlength="200" placeholder="例如：买文具 / 去银行 / 送货"><div class="row" style="margin-bottom:10px">'+['买东西','银行','送货','见客户'].map(x=>'<button type="button" class="btn secondary" style="padding:6px 10px" onclick="$(\'outR\').value=\''+x+'\'">'+x+'</button>').join('')+'</div><p id="outS" class="muted">确认后会记录外出时间和位置。回来后请点「回公司」。外出不影响上班和下班打卡。</p><div class="row"><button class="btn" onclick="outGo()">确认外出</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+  openModal('<h3>🚶 外出</h3><label>外出理由（必填）</label><input id="outR" maxlength="200" placeholder="例如：买文具 / 去银行 / 送货"><div class="row" style="margin-bottom:10px">'+['买东西','银行','送货','见客户'].map(x=>'<button type="button" class="btn secondary" style="padding:6px 10px" onclick="$(\'outR\').value=\''+x+'\'">'+x+'</button>').join('')+'</div><p id="outS" class="muted">回来请点「回公司」；不回公司，点「外出后直接下班」。</p><div class="row"><button class="btn" onclick="outGo()">确认外出</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
 }
 function outGo(){guard(async()=>{
   const reason=($('outR').value||'').trim();
-  if(reason.length<2){$('outS').textContent='请先写外出理由';return}
+  if(reason.length<2){$('outS').textContent='请写外出理由';return}
   $('outS').textContent='正在定位…';
   let pos=null;try{pos=await getPos(10000)}catch(e){}
   const {error}=await sb.rpc('hr_out_start',{p_reason:reason,p_lat:pos?pos.coords.latitude:null,p_lng:pos?pos.coords.longitude:null,p_accuracy:pos?pos.coords.accuracy:null});
   if(error){$('outS').textContent=hrErr(error.message);toast(hrErr(error.message));return}
-  closeModal();await loadHR();renderHR();toast('已记录外出，回来请点「回公司」');
+  closeModal();await loadHR();renderHR();toast('已外出，回来请点「回公司」');
 })}
 function backGo(){guard(async()=>{
   toast('正在定位…');
@@ -830,7 +858,7 @@ async function camOpen(type){
   openModal('<h3>'+camTitle[type]+'</h3>'+(needCam?'<video id="camV" autoplay playsinline muted style="width:100%;border-radius:10px;background:#000;transform:scaleX(-1)"></video>':'')+hint+'<p id="camS" class="muted">'+(needCam?'正在启动摄像头和定位…':'正在获取定位…')+'</p>'+(type==='out'&&earlyBy(H.today)>0?'<label>提早下班理由（必填）</label><textarea id="camR" placeholder="例如：去客户处送货" style="min-height:60px"></textarea>':'')+'<div class="row"><button id="camB" class="btn" disabled onclick="camShot()">'+(needCam?'📸 拍照并打卡':'✅ 确认打卡')+'</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
   if(needCam){
     try{cam=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640}},audio:false})}
-    catch(e){if($('camS'))$('camS').textContent='无法打开摄像头：请允许相机权限（需要 HTTPS 网址）';return}
+    catch(e){if($('camS'))$('camS').textContent='打不开摄像头，请允许相机权限';return}
     if(!$('camV')){stopCam();return}
     $('camV').srcObject=cam;
   }
@@ -841,7 +869,7 @@ async function camOpen(type){
 function camShot(){guard(async()=>{
   const needCam=camType==='in';
   const rsn=($('camR')?$('camR').value:'').trim();
-  if(camType==='out'&&$('camR')&&rsn.length<2){toast('提早下班请先写理由');return}
+  if(camType==='out'&&$('camR')&&rsn.length<2){toast('提早下班请写理由');return}
   let path=null;
   if(needCam){
     const v=$('camV'),c=document.createElement('canvas'),w=Math.min(640,v.videoWidth||640);
@@ -909,7 +937,7 @@ async function setProf(id,patch){await guard(async()=>{const r=await sb.from('pr
 async function setDept(id,cur){const v=prompt('部门',cur);if(v===null)return;await setProf(id,{dept:v.trim()||null})}
 async function newEmp(){
   const g=i=>$(i).value.trim(),body={username:g('ne_u').toLowerCase(),name:g('ne_n'),role:$('ne_r').value,dept:g('ne_d'),schedule_id:$('ne_s').value,password:$('ne_p').value};
-  if(!/^[a-z0-9_]{3,20}$/.test(body.username)){toast('账号名只能用小写字母、数字、下划线，3-20 位');return}
+  if(!/^[a-z0-9_]{3,20}$/.test(body.username)){toast('账号名：3-20 位小写字母、数字或下划线');return}
   if(!body.name){toast('请填写姓名');return}
   if(body.password.length<8){toast('密码至少 8 位');return}
   if(body.role==='admin'&&!isSuper()){toast('只有主 Admin（账号 admin）可以新增 Admin');return}
@@ -927,10 +955,10 @@ function schForm(id){
 async function schSave(id){
   const row={name:$('sc_n').value.trim(),weekday:$('sc_w').value.trim().toUpperCase(),sat:$('sc_s').value.trim().toUpperCase(),sun:$('sc_u').value.trim().toUpperCase()};
   if(!row.name){toast('请填写名称');return}
-  if(![row.weekday,row.sat,row.sun].every(okRule)){toast('时间格式必须是 08:30-18:00（两位数的小时）或 OFF');return}
+  if(![row.weekday,row.sat,row.sun].every(okRule)){toast('格式：08:30-18:00 或 OFF');return}
   await guard(async()=>{const r=id?await sb.from('hr_schedules').update(row).eq('id',id):await sb.from('hr_schedules').insert(row);if(r.error)throw r.error;closeModal();await loadAll();renderHR();toast('已保存')});
 }
-async function schDel(id){if(!confirm('删除后，使用这个 Schedule 的员工会变成「未设置」，已有打卡记录不受影响。确定删除？'))return;await guard(async()=>{const r=await sb.from('hr_schedules').delete().eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已删除')})}
+async function schDel(id){if(!confirm('确定删除？使用它的员工会变成「未设置」，已有记录不变。'))return;await guard(async()=>{const r=await sb.from('hr_schedules').delete().eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已删除')})}
 /* ----- Admin：地点与设置 ----- */
 function tabSet(){
   const s=H.settings;
@@ -958,7 +986,7 @@ let DV=[],_mt='';
 function devTok(){let t='';try{t=localStorage.getItem('akaido_dev')||''}catch(e){}if(t.length<32){t=Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,'0')).join('');try{localStorage.setItem('akaido_dev',t)}catch(e){_mt=_mt||t;t=_mt}}return t}
 function devLabel(){const u=navigator.userAgent,os=(/iPhone|iPad|Android [\d.]+(?:; [^)]+)?|Windows NT [\d.]+|Mac OS X [\d_]+|Linux/.exec(u)||['?'])[0],br=/Edg\//.test(u)?'Edge':/Firefox\//.test(u)?'Firefox':/Chrome\/|CriOS/.test(u)?'Chrome':/Safari\//.test(u)?'Safari':'?';return (os+' · '+br).replace(/_/g,'.')}
 async function regDevice(){me.devState='unknown';try{const {data,error}=await sb.rpc('hr_device_register',{p_label:devLabel()});if(!error&&data)me.devState=data}catch(e){}}
-async function recheckDev(){await guard(async()=>{await regDevice();renderHR();toast(me.devState==='approved'?'已批准，可以打卡了':'还在等待管理员批准')})}
+async function recheckDev(){await guard(async()=>{await regDevice();renderHR();toast(me.devState==='approved'?'已批准，可以打卡':'还在等待批准')})}
 async function loadDev(){try{const r=await sb.from('hr_devices').select('*').order('requested_at',{ascending:false});DV=r.error?[]:(r.data||[])}catch(e){DV=[]}}
 function devCard(){
   const pend=DV.filter(d=>d.status==='pending').length;
@@ -967,7 +995,7 @@ function devCard(){
   return '<div class="card"><h3>📱 设备管理'+(pend?' <span class="badge" style="background:#fde8e8;color:#b42318">'+pend+' 个待批准</span>':'')+'</h3><div class="table"><table><tr><th>员工</th><th>设备</th><th>状态</th><th>最后使用</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有设备登记</td></tr>')+'</table></div><p class="muted">员工登录后会自动提交申请，批准后才能打卡。每人只能绑定一部手机，换手机请员工用新手机登录，这里批准新的，旧的自动取消。「解除」后，他的手机会重新变成待批准。</p></div>';
 }
 async function devApprove(id){await guard(async()=>{const {error}=await sb.rpc('hr_device_approve',{p_id:id});if(error){const m=error.message||'';toast(/DEVICE_BOUND_TO_OTHER/.test(m)?'这部手机已绑定给：'+m.replace(/^.*DEVICE_BOUND_TO_OTHER:\s*/,''):'操作失败：'+m);return}await loadDev();renderHR();toast('已批准')})}
-async function devDel(id){if(!confirm('确定？这部手机之后需要重新提交申请。'))return;await guard(async()=>{const r=await sb.from('hr_devices').delete().eq('id',id);if(r.error)throw r.error;await loadDev();renderHR();toast('已处理')})}
+async function devDel(id){if(!confirm('确定取消绑定？此手机需重新申请。'))return;await guard(async()=>{const r=await sb.from('hr_devices').delete().eq('id',id);if(r.error)throw r.error;await loadDev();renderHR();toast('已处理')})}
 
 /* ========== 启动 ========== */
 (async function init(){
