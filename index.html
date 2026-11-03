@@ -298,9 +298,9 @@ function onDate(x,d){return ymd(new Date(x))===d}
 function filterCheckin(){ckDate=$('ckDate').value||ymd();renderCheckinBody()}
 function renderCheckin(){
   const custs=(isAdmin()?D.customers:D.customers.filter(c=>c.owner_id===me.id)).slice().sort((a,b)=>a.name.localeCompare(b.name));
-  const custOpts='<option value="">（不选择客户）</option>'+custs.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  const custOpts='<option value="">请选择客户…</option>'+custs.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
   $('checkin').innerHTML='<h2>📍 外勤打卡</h2><div class="card">'+
-    '<label>这次打卡是去拜访哪位客户？（可选）</label><select id="ckCust">'+custOpts+'</select>'+
+    '<label>这次打卡是去拜访哪位客户？（必选）</label><select id="ckCust">'+custOpts+'</select>'+(custs.length?'':'<p class="red" style="margin:0 0 8px">你还没有客户，请先到「客户」页新增客户，才能打卡。</p>')+
     '<div class="row"><button class="btn" onclick="attend(\'IN\')">📍 CHECK IN</button><button class="btn secondary" onclick="attend(\'OUT\')">🏁 CHECK OUT</button></div>'+
     '<p class="muted">今日状态：'+(D.attendance.some(a=>a.user_id===me.id&&a.type==='IN'&&isToday(a.created_at))?'已 Check In':'尚未 Check In')+'。打卡会记录 GPS 位置，请在弹出的提示里选择「允许」。</p></div>'+
     '<div class="card"><div class="row between"><h3 style="margin:0">查看日期</h3><input id="ckDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div></div>'+
@@ -341,6 +341,7 @@ async function attend(type){
   await guard(async()=>{
     const custEl=$('ckCust');
     const custId=custEl&&custEl.value?custEl.value:null;
+    if(!custId){toast('请先选择客户，才能打卡');return}
     toast('正在获取 GPS…');
     let pos;
     try{pos=await getPos(12000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}
