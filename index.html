@@ -938,24 +938,40 @@ async function delStaff(id,name){
 let LV=[];
 const dmy=d=>{const a=String(d).split('-');return +a[2]+'/'+ +a[1]+'/'+a[0]};
 async function loadLv(){try{const r=await sb.from('hr_leaves').select('*').order('start_date',{ascending:false}).limit(300);LV=r.error?[]:(r.data||[])}catch(e){LV=[]}}
-const leaveErr=m=>{m=String(m||'');return /LEAVE_OVERLAP/.test(m)?'这段日期已经有请假记录':/LEAVE_NO_BALANCE/.test(m)?'有薪假期余额不足':/LEAVE_EXPIRED/.test(m)?'有薪假期已过到期日，这段日期不能用有薪假期':/LEAVE_BAD_DATES/.test(m)?'日期不正确':/LEAVE_TOO_LONG/.test(m)?'一次最多请 60 天':/LEAVE_NO_WORKDAY/.test(m)?'这段日期都是休息日，不需要请假':/LEAVE_STARTED/.test(m)?'已经开始的假期不能取消，请联系管理员':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能请假':'请假失败：'+m};
-const lvKind=l=>l.kind==='paid'?'有薪':'无薪';
+const leaveErr=m=>{m=String(m||'');return /LEAVE_OVERLAP/.test(m)?'这段日期已经有请假记录':/LEAVE_NO_BALANCE/.test(m)?'有薪假期余额不足':/SICK_NO_BALANCE/.test(m)?'病假次数已用完，请改选无薪假期':/LEAVE_EXPIRED/.test(m)?'这个假期已过到期日，这段日期不能使用，请改选无薪假期':/LEAVE_BAD_DATES/.test(m)?'日期不正确':/LEAVE_TOO_LONG/.test(m)?'一次最多请 60 天':/LEAVE_NO_WORKDAY/.test(m)?'这段日期都是休息日，不需要请假':/LEAVE_STARTED/.test(m)?'已经开始的假期不能取消，请联系管理员':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能请假':'请假失败：'+m};
+const lvKind=l=>({paid:'有薪 · 不扣薪',sick:'病假 · 不扣薪',unpaid:'无薪 · 扣薪'}[l.kind]||l.kind);
 const lvStat=l=>({approved:'已登记',rejected:'已被驳回',cancelled:'已取消'}[l.status]||l.status);
 function leaveCard(){
   if(me.track_attendance===false)return '';
-  const td=klDate(Date.now()),rows=LV.filter(l=>l.user_id===me.id).slice(0,8).map(l=>'<div class="item"><b>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</b> · '+l.days+' 天 · '+lvKind(l)+' · '+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+' · '+lvStat(l)+(l.status==='approved'&&l.start_date>td?' <a href="#" onclick="leaveCancel(\''+esc(l.id)+'\');return false">取消</a>':'')+'</div>').join('');
-  return '<div class="card"><div class="row between"><h3 style="margin:0">🌴 请假 On Leave</h3><button class="btn" onclick="leaveForm()">＋ 请假</button></div><p class="muted" style="margin:8px 0 0">有薪假期余额：<b>'+(me.leave_balance||0)+' 天</b>'+(me.leave_expiry?' · 到期日 '+dmy(me.leave_expiry):'')+'</p>'+(rows||'<p class="muted">还没有请假记录</p>')+'</div>';
+  const td=klDate(Date.now()),rows=LV.filter(l=>l.user_id===me.id).slice(0,8).map(l=>'<div class="item"><b>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</b> · '+l.days+' 天 · '+lvKind(l)+' · '+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+(l.kind==='sick'?(l.mc_path?' · <a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">MC</a>':' · <a href="#" onclick="leaveMcForm(\''+esc(l.id)+'\');return false">补传 MC</a>'):'')+' · '+lvStat(l)+(l.status==='approved'&&l.start_date>td?' <a href="#" onclick="leaveCancel(\''+esc(l.id)+'\');return false">取消</a>':'')+'</div>').join('');
+  return '<div class="card"><div class="row between"><h3 style="margin:0">🌴 请假 On Leave</h3><button class="btn" onclick="leaveForm()">＋ 请假</button></div><p class="muted" style="margin:8px 0 0">有薪假期余额：<b>'+(me.leave_balance||0)+' 天</b> · 病假余额：<b>'+(me.sick_balance==null?0:me.sick_balance)+' 次</b>'+(me.leave_expiry?' · 到期日 '+dmy(me.leave_expiry):'')+'</p>'+(rows||'<p class="muted">还没有请假记录</p>')+'</div>';
 }
 function leaveForm(){
-  const t=klDate(Date.now());
-  openModal('<h3>请假 On Leave</h3><label>类型</label><select id="lv_k"><option value="paid">有薪假期（余额 '+(me.leave_balance||0)+' 天'+(me.leave_expiry?'，到期 '+dmy(me.leave_expiry):'')+'）</option><option value="unpaid">无薪假期</option></select><label>从</label><input id="lv_s" type="date" value="'+t+'"><label>到</label><input id="lv_e" type="date" value="'+t+'"><label>原因</label><select id="lv_r">'+['病假','旅行','婚礼','白事','其它'].map(x=>'<option>'+x+'</option>').join('')+'</select><label>备注（选填；原因选「其它」请写清楚）</label><input id="lv_n"><div class="row"><button class="btn" onclick="leaveSubmit()">提交</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+  const t=klDate(Date.now()),ex=me.leave_expiry?'，到期 '+dmy(me.leave_expiry):'';
+  openModal('<h3>请假 On Leave</h3><label>类型</label><select id="lv_k" onchange="lvKindChg()"><option value="paid">有薪假期（余额 '+(me.leave_balance||0)+' 天'+ex+'）</option><option value="sick">病假（余额 '+(me.sick_balance==null?0:me.sick_balance)+' 次'+ex+'）</option><option value="unpaid">无薪假期</option></select><label>从</label><input id="lv_s" type="date" value="'+t+'"><label>到</label><input id="lv_e" type="date" value="'+t+'"><div id="lv_rw"><label>原因</label><select id="lv_r">'+['旅行','婚礼','白事','其它'].map(x=>'<option>'+x+'</option>').join('')+'</select></div><div id="lv_mw" class="hidden"><label>医生证明 MC（照片或 PDF，可以稍后补传）</label><input id="lv_m" type="file" accept="image/*,application/pdf"></div><label>备注（选填；原因选「其它」请写清楚）</label><input id="lv_n"><div class="row"><button class="btn" onclick="leaveSubmit()">提交</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+}
+const lvKindChg=()=>{const k=$('lv_k').value;$('lv_rw').classList.toggle('hidden',k==='sick');$('lv_mw').classList.toggle('hidden',k!=='sick')};
+async function mcUpload(file){
+  if(!file)return null;
+  if(!/^(image\/|application\/pdf)/.test(file.type||''))throw new Error('MC 只能是照片或 PDF');
+  if(file.size>8*1024*1024)throw new Error('文件不能超过 8MB');
+  const ext=((file.name||'').split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg',path=me.id+'/'+Date.now()+'.'+ext;
+  const up=await sb.storage.from('leave-mc').upload(path,file,{contentType:file.type});if(up.error)throw up.error;return path;
 }
 async function leaveSubmit(){
-  const a=$('lv_s').value,b=$('lv_e').value,r=$('lv_r').value,n=$('lv_n').value.trim();
+  const k=$('lv_k').value,a=$('lv_s').value,b=$('lv_e').value,r=k==='sick'?'病假':$('lv_r').value,n=$('lv_n').value.trim();
   if(!a||!b||b<a){toast('请选择正确的日期');return}
   if(r==='其它'&&n.length<2){toast('原因选「其它」，请在备注写清楚');return}
-  await guard(async()=>{const {error}=await sb.rpc('hr_leave_apply',{p_kind:$('lv_k').value,p_start:a,p_end:b,p_reason:r,p_note:n||null});if(error){toast(leaveErr(error.message));return}closeModal();await loadAll();Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});renderHR();toast('请假已登记')});
+  await guard(async()=>{
+    const mc=k==='sick'?await mcUpload($('lv_m').files[0]):null;
+    const {error}=await sb.rpc('hr_leave_apply',{p_kind:k,p_start:a,p_end:b,p_reason:r,p_note:n||null,p_mc:mc});
+    if(error){toast(leaveErr(error.message));return}
+    closeModal();await loadAll();renderHR();toast('请假已登记');
+  });
 }
+function leaveMcForm(id){openModal('<h3>补传医生证明 MC</h3><input id="mc_f" type="file" accept="image/*,application/pdf"><div class="row"><button class="btn" onclick="leaveMcSave(\''+esc(id)+'\')">上传</button><button class="btn secondary" onclick="closeModal()">取消</button></div>')}
+async function leaveMcSave(id){const f=$('mc_f').files[0];if(!f){toast('请先选择文件');return}await guard(async()=>{const path=await mcUpload(f);const {error}=await sb.rpc('hr_leave_set_mc',{p_id:id,p_path:path});if(error){toast(leaveErr(error.message));return}closeModal();await loadHR();renderHR();toast('MC 已上传')})}
+async function mcView(p){const {data,error}=await sb.storage.from('leave-mc').createSignedUrl(p,300);if(error){toast('无法读取 MC');return}openModal((/\.pdf$/i.test(p)?'<a class="btn full" target="_blank" rel="noopener" href="'+esc(data.signedUrl)+'">打开 PDF</a>':'<img src="'+esc(data.signedUrl)+'" style="width:100%;border-radius:10px;margin-bottom:8px">')+'<button class="btn full secondary" style="margin-top:8px" onclick="closeModal()">关闭</button>')}
 async function leaveCancel(id){
   if(!confirm(isAdmin()?'驳回这条请假？有薪的天数会退还给员工。':'取消这条请假？有薪的天数会退还。'))return;
   await guard(async()=>{const {error}=await sb.rpc('hr_leave_cancel',{p_id:id});if(error){toast(leaveErr(error.message));return}await loadAll();Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});renderHR();toast('已处理')});
@@ -963,11 +979,11 @@ async function leaveCancel(id){
 /* Admin：请假 */
 function tabLeave(){
   const emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
-  const inp=(p,k,t)=>'<input type="'+t+'" '+(t==='number'?'min="0" step="0.5"':'')+' style="margin:0;padding:6px;width:'+(t==='date'?'150px':'80px')+'" value="'+esc(p[k]==null?'':p[k])+'" onchange="setProf(\''+esc(p.id)+'\',{'+k+':'+(t==='number'?'Math.max(0,parseFloat(this.value)||0)':'this.value||null')+'})">';
-  const r1=emps.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+inp(p,'leave_balance','number')+'</td><td>'+inp(p,'leave_expiry','date')+'</td></tr>').join('');
-  const r2=LV.filter(l=>l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth).map(l=>'<tr><td>'+esc(nameOf(l.user_id))+'</td><td>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</td><td>'+l.days+'</td><td>'+lvKind(l)+'</td><td>'+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+'</td><td>'+lvStat(l)+'</td><td>'+(l.status==='approved'?'<button class="btn danger" style="padding:6px 10px" onclick="leaveCancel(\''+esc(l.id)+'\')">驳回</button>':'')+'</td></tr>').join('');
-  return '<div class="card"><h3>员工有薪假期设置</h3><div class="table"><table><tr><th>员工</th><th>余额（天）</th><th>到期日</th></tr>'+(r1||'<tr><td colspan="3" class="muted">没有员工</td></tr>')+'</table></div><p class="muted">每个员工的天数和到期日可以不一样，改完自动保存。员工申请有薪假期时，会检查余额和到期日。</p></div>'+
-   '<div class="card"><div class="row between"><h3 style="margin:0">请假记录</h3>'+monthBar()+'</div><div class="table"><table><tr><th>员工</th><th>日期</th><th>天数</th><th>类型</th><th>原因</th><th>状态</th><th></th></tr>'+(r2||'<tr><td colspan="7" class="muted">这个月没有请假记录</td></tr>')+'</table></div></div>';
+  const inp=(p,k,t)=>'<input type="'+t+'" '+(t==='number'?'min="0" step="'+(k==='sick_balance'?'1':'0.5')+'"':'')+' style="margin:0;padding:6px;width:'+(t==='date'?'150px':'80px')+'" value="'+esc(p[k]==null?'':p[k])+'" onchange="setProf(\''+esc(p.id)+'\',{'+k+':'+(t==='number'?'Math.max(0,'+(k==='sick_balance'?'Math.round(parseFloat(this.value)||0)':'parseFloat(this.value)||0')+')':'this.value||null')+'})">';
+  const r1=emps.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+inp(p,'leave_balance','number')+'</td><td>'+inp(p,'sick_balance','number')+'</td><td>'+inp(p,'leave_expiry','date')+'</td></tr>').join('');
+  const r2=LV.filter(l=>l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth).map(l=>'<tr><td>'+esc(nameOf(l.user_id))+'</td><td>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</td><td>'+l.days+'</td><td>'+lvKind(l)+'</td><td>'+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+'</td><td>'+(l.kind==='sick'?(l.mc_path?'<a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">查看</a>':'<span class="red">未上传</span>'):'')+'</td><td>'+lvStat(l)+'</td><td>'+(l.status==='approved'?'<button class="btn danger" style="padding:6px 10px" onclick="leaveCancel(\''+esc(l.id)+'\')">驳回</button>':'')+'</td></tr>').join('');
+  return '<div class="card"><h3>员工有薪假期设置</h3><div class="table"><table><tr><th>员工</th><th>有薪余额（天）</th><th>病假余额（次）</th><th>到期日（共用）</th></tr>'+(r1||'<tr><td colspan="4" class="muted">没有员工</td></tr>')+'</table></div><p class="muted">每个员工的天数、次数和到期日可以不一样，改完自动保存。有薪假期和病假共用同一个到期日；病假按次数计，每提交一次用掉 1 次。</p></div>'+
+   '<div class="card"><div class="row between"><h3 style="margin:0">请假记录</h3>'+monthBar()+'</div><div class="table"><table><tr><th>员工</th><th>日期</th><th>天数</th><th>类型</th><th>原因</th><th>MC</th><th>状态</th><th></th></tr>'+(r2||'<tr><td colspan="8" class="muted">这个月没有请假记录</td></tr>')+'</table></div></div>';
 }
 
 async function setProf(id,patch){await guard(async()=>{const r=await sb.from('profiles').update(patch).eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已保存')})}
