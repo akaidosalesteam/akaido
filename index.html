@@ -43,7 +43,7 @@ label{display:block;font-size:12px;font-weight:700;color:#667085;margin-bottom:3
 .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ddd;display:flex;z-index:20;padding-bottom:env(safe-area-inset-bottom,0px)}
 .nav button{flex:1;border:0;background:#fff;padding:9px 3px;font-size:11px;color:#667085}
 .nav button.on{color:#123B7A;font-weight:800}
-main{padding-bottom:180px}
+main.container{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .loginbox{width:100%;max-width:420px}
 .logo{font-size:34px;font-weight:900;color:#123B7A}
@@ -51,7 +51,7 @@ main{padding-bottom:180px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:8px;border-bottom:1px solid #eee;white-space:nowrap}
 td select{margin:0;padding:6px;font-size:13px;width:auto}
-.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#172033;color:#fff;padding:11px 16px;border-radius:10px;font-size:14px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#172033;color:#fff;padding:11px 16px;border-radius:10px;font-size:14px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
 .toast.show{opacity:1}
 @media(min-width:700px){.grid{grid-template-columns:repeat(3,1fr)}}
 @media(min-width:1000px){.grid{grid-template-columns:repeat(6,1fr)}}
@@ -100,7 +100,7 @@ td select{margin:0;padding:6px;font-size:13px;width:auto}
  </nav>
 </div>
 <div id="toast" class="toast"></div>
-<div id="modal" class="hidden" style="position:fixed;inset:0;background:#000b;z-index:60;overflow:auto;padding:14px"><div id="modalBox" class="card" style="max-width:480px;margin:20px auto"></div></div>
+<div id="modal" class="hidden" style="position:fixed;inset:0;background:#000b;z-index:60;overflow:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))"><div id="modalBox" class="card" style="max-width:480px;margin:20px auto"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
@@ -698,7 +698,7 @@ const hm=n=>n?Math.floor(n/60)+'h'+String(n%60).padStart(2,'0')+'m':'0';
 const okRule=v=>/^(OFF|([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d)$/.test(v);
 const ruleOf=(s,d)=>{if(!s)return null;const w=new Date(d+'T00:00:00Z').getUTCDay();return w===0?s.sun:w===6?s.sat:s.weekday};
 let H={schedules:[],locations:[],settings:{ot_grace_min:30,ot_unit:'30',late_grace_min:0,enforce_geofence:true,lunch_auto:true,lunch_start:'13:00',lunch_end:'14:00'},records:[],from:'',err:''},hrTab='mine',hrMonth=klDate(Date.now()).slice(0,7),fEmp='',hrTimer=null,cam=null,camPos=null,camType='';
-async function loadHR(){await loadDev();return loadHR0()}
+async function loadHR(){await loadDev();await loadLv();return loadHR0()}
 async function loadHR0(){
   const m=hrMonth,y=+m.slice(0,4),mo=+m.slice(5,7),nxt=mo===12?(y+1)+'-01-01':y+'-'+String(mo+1).padStart(2,'0')+'-01';
   const errs=[];
@@ -776,8 +776,8 @@ function renderHR(){
   let h='<h2>🕐 考勤</h2>';
   if(H.err)h+='<div class="banner">考勤数据读取失败：'+esc(H.err)+'</div>';
   if(!me.pwdChanged)h+='<div class="banner"><b>⚠️ 请先修改默认密码。</b>请到本页最下方「修改我的密码」。</div>';
-  if(admin)h+='<div class="row" style="margin-bottom:10px">'+[['mine','我的打卡'],['rec','出勤记录'],['emp','员工'+(DV.some(d=>d.status==='pending')?' 🔴':'')],['sch','Schedule'],['set','地点与设置']].map(t=>'<button class="btn '+(tab===t[0]?'':'secondary')+'" onclick="hrTab=\''+t[0]+'\';renderHR()">'+t[1]+'</button>').join('')+'</div>';
-  h+=({mine:tabMine,rec:tabRec,emp:tabEmp,sch:tabSch,set:tabSet})[tab]();
+  if(admin)h+='<div class="row" style="margin-bottom:10px">'+[['mine','我的打卡'],['rec','出勤记录'],['emp','员工'+(DV.some(d=>d.status==='pending')?' 🔴':'')],['leave','请假'],['sch','Schedule'],['set','地点与设置']].map(t=>'<button class="btn '+(tab===t[0]?'':'secondary')+'" onclick="hrTab=\''+t[0]+'\';renderHR()">'+t[1]+'</button>').join('')+'</div>';
+  h+=({mine:tabMine,rec:tabRec,emp:tabEmp,sch:tabSch,set:tabSet,leave:tabLeave})[tab]();
   if(tab==='mine')h+='<div class="card"><h3>🔒 修改我的密码</h3><input id="pw1" type="password" placeholder="新密码（至少 8 位）" autocomplete="new-password"><input id="pw2" type="password" placeholder="再输入一次新密码" autocomplete="new-password"><button class="btn" onclick="changePassword()">保存新密码</button></div>';
   $('hr').innerHTML=h;
 }
@@ -800,7 +800,7 @@ function tabMine(){
   }
   h+='<p class="muted">每天只有「上班打卡」要拍照，其余只记录定位。请允许相机和定位。时间以服务器为准。</p></div>';
   hrTimer=setInterval(()=>{const e=$('hrNow');if(e)e.textContent=klHM(Date.now());const l=$('lunchT');if(l)l.textContent=lunchTxt(l.dataset.t)},10000);
-  return h+monthCard(me.id);
+  return h+leaveCard()+monthCard(me.id);
 }
 function monthBar(){return '<input type="month" style="width:auto;margin:0" value="'+hrMonth+'" onchange="setMonth(this.value)">'}
 async function setMonth(v){if(!v)return;hrMonth=v;await guard(async()=>{await loadHR();renderHR()})}
@@ -933,6 +933,42 @@ async function delStaff(id,name){
     await loadAll();page(cur);toast('已删除');
   });
 }
+/* ========== 请假 On Leave ========== */
+let LV=[];
+const dmy=d=>{const a=String(d).split('-');return +a[2]+'/'+ +a[1]+'/'+a[0]};
+async function loadLv(){try{const r=await sb.from('hr_leaves').select('*').order('start_date',{ascending:false}).limit(300);LV=r.error?[]:(r.data||[])}catch(e){LV=[]}}
+const leaveErr=m=>{m=String(m||'');return /LEAVE_OVERLAP/.test(m)?'这段日期已经有请假记录':/LEAVE_NO_BALANCE/.test(m)?'有薪假期余额不足':/LEAVE_EXPIRED/.test(m)?'有薪假期已过到期日，这段日期不能用有薪假期':/LEAVE_BAD_DATES/.test(m)?'日期不正确':/LEAVE_TOO_LONG/.test(m)?'一次最多请 60 天':/LEAVE_NO_WORKDAY/.test(m)?'这段日期都是休息日，不需要请假':/LEAVE_STARTED/.test(m)?'已经开始的假期不能取消，请联系管理员':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能请假':'请假失败：'+m};
+const lvKind=l=>l.kind==='paid'?'有薪':'无薪';
+const lvStat=l=>({approved:'已登记',rejected:'已被驳回',cancelled:'已取消'}[l.status]||l.status);
+function leaveCard(){
+  if(me.track_attendance===false)return '';
+  const td=klDate(Date.now()),rows=LV.filter(l=>l.user_id===me.id).slice(0,8).map(l=>'<div class="item"><b>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</b> · '+l.days+' 天 · '+lvKind(l)+' · '+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+' · '+lvStat(l)+(l.status==='approved'&&l.start_date>td?' <a href="#" onclick="leaveCancel(\''+esc(l.id)+'\');return false">取消</a>':'')+'</div>').join('');
+  return '<div class="card"><div class="row between"><h3 style="margin:0">🌴 请假 On Leave</h3><button class="btn" onclick="leaveForm()">＋ 请假</button></div><p class="muted" style="margin:8px 0 0">有薪假期余额：<b>'+(me.leave_balance||0)+' 天</b>'+(me.leave_expiry?' · 到期日 '+dmy(me.leave_expiry):'')+'</p>'+(rows||'<p class="muted">还没有请假记录</p>')+'</div>';
+}
+function leaveForm(){
+  const t=klDate(Date.now());
+  openModal('<h3>请假 On Leave</h3><label>类型</label><select id="lv_k"><option value="paid">有薪假期（余额 '+(me.leave_balance||0)+' 天'+(me.leave_expiry?'，到期 '+dmy(me.leave_expiry):'')+'）</option><option value="unpaid">无薪假期</option></select><label>从</label><input id="lv_s" type="date" value="'+t+'"><label>到</label><input id="lv_e" type="date" value="'+t+'"><label>原因</label><select id="lv_r">'+['病假','旅行','婚礼','白事','其它'].map(x=>'<option>'+x+'</option>').join('')+'</select><label>备注（选填；原因选「其它」请写清楚）</label><input id="lv_n"><div class="row"><button class="btn" onclick="leaveSubmit()">提交</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+}
+async function leaveSubmit(){
+  const a=$('lv_s').value,b=$('lv_e').value,r=$('lv_r').value,n=$('lv_n').value.trim();
+  if(!a||!b||b<a){toast('请选择正确的日期');return}
+  if(r==='其它'&&n.length<2){toast('原因选「其它」，请在备注写清楚');return}
+  await guard(async()=>{const {error}=await sb.rpc('hr_leave_apply',{p_kind:$('lv_k').value,p_start:a,p_end:b,p_reason:r,p_note:n||null});if(error){toast(leaveErr(error.message));return}closeModal();await loadAll();Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});renderHR();toast('请假已登记')});
+}
+async function leaveCancel(id){
+  if(!confirm(isAdmin()?'驳回这条请假？有薪的天数会退还给员工。':'取消这条请假？有薪的天数会退还。'))return;
+  await guard(async()=>{const {error}=await sb.rpc('hr_leave_cancel',{p_id:id});if(error){toast(leaveErr(error.message));return}await loadAll();Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});renderHR();toast('已处理')});
+}
+/* Admin：请假 */
+function tabLeave(){
+  const emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  const inp=(p,k,t)=>'<input type="'+t+'" '+(t==='number'?'min="0" step="0.5"':'')+' style="margin:0;padding:6px;width:'+(t==='date'?'150px':'80px')+'" value="'+esc(p[k]==null?'':p[k])+'" onchange="setProf(\''+esc(p.id)+'\',{'+k+':'+(t==='number'?'Math.max(0,parseFloat(this.value)||0)':'this.value||null')+'})">';
+  const r1=emps.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+inp(p,'leave_balance','number')+'</td><td>'+inp(p,'leave_expiry','date')+'</td></tr>').join('');
+  const r2=LV.filter(l=>l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth).map(l=>'<tr><td>'+esc(nameOf(l.user_id))+'</td><td>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</td><td>'+l.days+'</td><td>'+lvKind(l)+'</td><td>'+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+'</td><td>'+lvStat(l)+'</td><td>'+(l.status==='approved'?'<button class="btn danger" style="padding:6px 10px" onclick="leaveCancel(\''+esc(l.id)+'\')">驳回</button>':'')+'</td></tr>').join('');
+  return '<div class="card"><h3>员工有薪假期设置</h3><div class="table"><table><tr><th>员工</th><th>余额（天）</th><th>到期日</th></tr>'+(r1||'<tr><td colspan="3" class="muted">没有员工</td></tr>')+'</table></div><p class="muted">每个员工的天数和到期日可以不一样，改完自动保存。员工申请有薪假期时，会检查余额和到期日。</p></div>'+
+   '<div class="card"><div class="row between"><h3 style="margin:0">请假记录</h3>'+monthBar()+'</div><div class="table"><table><tr><th>员工</th><th>日期</th><th>天数</th><th>类型</th><th>原因</th><th>状态</th><th></th></tr>'+(r2||'<tr><td colspan="7" class="muted">这个月没有请假记录</td></tr>')+'</table></div></div>';
+}
+
 async function setProf(id,patch){await guard(async()=>{const r=await sb.from('profiles').update(patch).eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已保存')})}
 async function setDept(id,cur){const v=prompt('部门',cur);if(v===null)return;await setProf(id,{dept:v.trim()||null})}
 async function newEmp(){
