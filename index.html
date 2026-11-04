@@ -221,6 +221,7 @@ async function loadAll(){
   for(const r of rs){if(r.error)throw r.error}
   D={profiles:rs[0].data,customers:rs[1].data,visits:rs[2].data,attendance:rs[3].data};
   await loadCardUrls(D.customers);
+  Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});   // 让 me（余额、到期日、Schedule 等）跟数据库保持一致
   await loadHR();
 }
 
