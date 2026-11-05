@@ -359,7 +359,7 @@ function custList(q){
   if(!list.length)return '<div class="muted" style="margin-top:8px">'+(q?'没有符合的客户':'还没有客户，点上方「新增客户」')+'</div>';
   return list.map(c=>{
     const overdue=c.follow_up&&c.follow_up<=today;
-    return '<div class="item"><div class="row between"><b>'+esc(c.name)+'</b><div class="row" style="gap:6px;width:auto">'+((c.kow_hock||'No')==='Yes'?'<span class="badge" style="background:#fde8e8;color:#b42318">Kow Hock</span>':'')+((c.is_customer||'No')==='Yes'?'<span class="badge" style="background:#e8f7ee;color:#16834a">已是客户</span>':'<span class="badge" style="background:#eee;color:#666">未成为客户</span>')+'<span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="badge" style="background:#e8eef8;color:#123B7A">'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天')+'</span><span class="badge" style="background:#eee;color:#444">'+esc(c.payment_method||'Cheque')+'</span></div></div>'+
+    return '<div class="item"><div class="row between"><b>'+esc(c.name)+'</b><div class="row" style="gap:6px;width:auto">'+((c.kow_hock||'No')==='Yes'?'<span class="badge" style="background:#fde8e8;color:#b42318">Kow Hock</span>':'')+(c.is_customer==='Blacklist'?'<span class="badge" style="background:#111;color:#fff">Black list</span>':(c.is_customer||'No')==='Yes'?'<span class="badge" style="background:#e8f7ee;color:#16834a">已是客户</span>':'<span class="badge" style="background:#eee;color:#666">未成为客户</span>')+'<span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="badge" style="background:#e8eef8;color:#123B7A">'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天')+'</span><span class="badge" style="background:#eee;color:#444">'+esc(c.payment_method||'Cheque')+'</span></div></div>'+
       '<small>'+esc(c.contact||'-')+' · '+esc(c.phone||'-')+(c.office_no?' · 未获取电话号码：'+esc(c.office_no):'')+'</small><br><small>'+esc(c.address||'-')+'</small>'+
       '<div class="muted" style="margin-top:4px">'+(admin?'负责人：'+esc(nameOf(c.owner_id))+' · ':'')+'下次跟进：<span class="'+(overdue?'red':'')+'">'+esc(c.follow_up||'-')+'</span>'+(isStaff()?'':' · 潜在订单 '+money(pm.get(c.id)||0))+(c.card_photo?(cardSrc(c.card_photo)?' · <a target="_blank" rel="noopener" href="'+esc(cardSrc(c.card_photo))+'">名片</a>':' · 名片（加载中，点刷新）'):'')+'</div>'+
       '<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="showCustomer(\''+esc(c.id)+'\')">'+(isStaff()?'详情':'详情/历史')+'</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button>'+(isStaff()?'':'<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button>')+'</div></div>';
@@ -382,7 +382,7 @@ function exportCustomers(){
   if(!list.length){toast('没有客户可导出');return}
   const pm=potMap();
   const header=['客户名称','Sales','等级','联系人','电话','未获取电话号码','地址','账期','付款方式','Kow Hock / Franchise','已成为客户','竞品','产品','下次跟进','潜在订单(RM)','备注'];
-  const rows=list.map(c=>[c.name,nameOf(c.owner_id),c.grade,c.contact,txtNo(c.phone),txtNo(c.office_no),c.address,c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天',c.payment_method||'Cheque',c.kow_hock||'No',c.is_customer||'No',c.competitor,c.products,c.follow_up,Number(pm.get(c.id)||0).toFixed(2),c.remarks]);
+  const rows=list.map(c=>[c.name,nameOf(c.owner_id),c.grade,c.contact,txtNo(c.phone),txtNo(c.office_no),c.address,c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天',c.payment_method||'Cheque',c.kow_hock||'No',custTxt(c.is_customer),c.competitor,c.products,c.follow_up,Number(pm.get(c.id)||0).toFixed(2),c.remarks]);
   dlCSV('AKAIDO-客户明细-'+(admin?'全部':me.name)+'-'+ymd()+'.csv',header,rows);
   toast('已导出 '+list.length+' 位客户');
 }
@@ -398,7 +398,7 @@ function showCustomer(id){
   const pm=potMap();
   $('customers').innerHTML='<h2>👥 '+esc(c.name)+'</h2>'+
    '<div class="card"><div class="row between"><span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="muted">'+(isAdmin()?'负责人：'+esc(nameOf(c.owner_id)):'')+'</span></div>'+
-   '<p>联系人：'+esc(c.contact||'-')+'<br>电话：'+esc(c.phone||'-')+'<br>未获取电话号码：'+esc(c.office_no||'-')+'<br>地址：'+esc(c.address||'-')+'<br>账期：'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+' 天')+'<br>付款方式：'+esc(c.payment_method||'Cheque')+'<br>Kow Hock / Franchise：'+esc(c.kow_hock||'No')+'<br>已成为我们客户：'+esc(c.is_customer||'No')+'<br>竞品：'+esc(c.competitor||'-')+'<br>产品：'+esc(c.products||'-')+'<br>下次跟进：'+esc(c.follow_up||'-')+(isStaff()?'':'<br>潜在订单：'+money(pm.get(c.id)||0))+'<br>备注：'+esc(c.remarks||'-')+'</p>'+
+   '<p>联系人：'+esc(c.contact||'-')+'<br>电话：'+esc(c.phone||'-')+'<br>未获取电话号码：'+esc(c.office_no||'-')+'<br>地址：'+esc(c.address||'-')+'<br>账期：'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+' 天')+'<br>付款方式：'+esc(c.payment_method||'Cheque')+'<br>Kow Hock / Franchise：'+esc(c.kow_hock||'No')+'<br>已成为我们客户：'+esc(custTxt(c.is_customer))+'<br>竞品：'+esc(c.competitor||'-')+'<br>产品：'+esc(c.products||'-')+'<br>下次跟进：'+esc(c.follow_up||'-')+(isStaff()?'':'<br>潜在订单：'+money(pm.get(c.id)||0))+'<br>备注：'+esc(c.remarks||'-')+'</p>'+
    (c.card_photo?(cardSrc(c.card_photo)?'<img src="'+esc(cardSrc(c.card_photo))+'" alt="名片" style="max-width:240px;width:100%;border-radius:10px;border:1px solid #e5e7eb;display:block;margin-top:4px">':'<p class="muted">名片图片加载中，请点右上角「↻ 刷新」</p>'):'')+
    '<div class="row">'+(isStaff()?'':'<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">＋ 新增拜访</button>')+'<button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button><button class="btn secondary" onclick="renderCustomers()">返回列表</button></div></div>'+
    (isStaff()?'':'<div class="card"><h3>拜访历史（'+vs.length+'）</h3>'+(vs.length?vs.map(v=>visitItem(v,false)).join(''):'<div class="muted">还没有拜访记录</div>')+'</div>');
@@ -434,6 +434,8 @@ async function uploadCard(file){
 const PAYMENT_TERMS=['COD','30','60','90','120','150'];
 const PAYMENT_METHODS=['Cheque','Online Transfer'];
 const KOWHOCK_OPTIONS=['Yes','No'];
+const CUST_OPTS=[['No','No'],['Yes','Yes'],['Blacklist','没有来往了（Black list）']];
+const custTxt=v=>({Yes:'Yes',Blacklist:'没有来往了（Black list）'}[v]||'No');
 function customerForm(id){
   showSection('customers');
   const c=id?D.customers.find(x=>x.id===id):{name:'',contact:'',phone:'',office_no:'',address:'',grade:'B',competitor:'',products:'',remarks:'',follow_up:'',owner_id:'',card_photo:null,payment_term:'COD',payment_method:'Cheque',kow_hock:'No',is_customer:'No'};
@@ -456,7 +458,7 @@ function customerForm(id){
    '<label>账期 Term</label><select id="c_term">'+PAYMENT_TERMS.map(t=>'<option value="'+esc(t)+'"'+((c.payment_term||'COD')===t?' selected':'')+'>'+esc(t==='COD'?'COD':t+' 天')+'</option>').join('')+'</select>'+
    '<label>付款方式 Payment</label><select id="c_pay">'+PAYMENT_METHODS.map(p=>'<option value="'+esc(p)+'"'+((c.payment_method||'Cheque')===p?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select>'+
    '<label>Kow Hock / Franchise</label><select id="c_kh">'+KOWHOCK_OPTIONS.map(k=>'<option value="'+esc(k)+'"'+((c.kow_hock||'No')===k?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select>'+
-   '<label>已经成为我们客户吗？</label><select id="c_isc">'+KOWHOCK_OPTIONS.map(k=>'<option value="'+esc(k)+'"'+((c.is_customer||'No')===k?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select>'+
+   '<label>已经成为我们客户吗？</label><select id="c_isc">'+CUST_OPTS.map(o=>'<option value="'+o[0]+'"'+((c.is_customer||'No')===o[0]?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>'+
    '<label>地址</label><input id="c_addr" value="'+esc(c.address)+'">'+
    '<label>竞品</label><input id="c_comp" value="'+esc(c.competitor)+'">'+
    '<label>使用 / 有兴趣的产品</label><input id="c_prod" value="'+esc(c.products)+'">'+
@@ -977,13 +979,26 @@ async function leaveCancel(id){
   await guard(async()=>{const {error}=await sb.rpc('hr_leave_cancel',{p_id:id});if(error){toast(leaveErr(error.message));return}await loadAll();Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});renderHR();toast('已处理')});
 }
 /* Admin：请假 */
+function leaveCsv(scope){
+  const y=hrMonth.slice(0,4),kn={paid:'有薪假期',sick:'病假',unpaid:'无薪假期'},sn={approved:'已登记',rejected:'已驳回',cancelled:'已取消'};
+  const list=LV.filter(l=>scope==='year'?(l.start_date.slice(0,4)===y||l.end_date.slice(0,4)===y):(l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth)).slice().sort((a,b)=>a.start_date.localeCompare(b.start_date));
+  if(!list.length){toast('这段时间没有请假记录');return}
+  dlCSV('AKAIDO-请假报告-'+(scope==='year'?y:hrMonth)+'.csv',['员工','类型','开始日期','结束日期','天数','原因','备注','状态','MC','是否扣薪','登记时间'],list.map(l=>[nameOf(l.user_id),kn[l.kind]||l.kind,l.start_date,l.end_date,l.days,l.reason,l.note||'',sn[l.status]||l.status,l.kind==='sick'?(l.mc_path?'已上传':'未上传'):'',l.kind==='unpaid'?'扣薪':'不扣薪',fmt(l.created_at)]));
+}
+function leaveBalCsv(){
+  const y=hrMonth.slice(0,4),emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  const used=(id,k)=>LV.filter(l=>l.user_id===id&&l.kind===k&&l.status==='approved'&&l.start_date.slice(0,4)===y);
+  const sum=a=>a.reduce((t,l)=>t+Number(l.days||0),0);
+  dlCSV('AKAIDO-请假余额汇总-'+y+'.csv',['员工','部门','有薪余额(天)','病假余额(次)','到期日(共用)',y+'年已用有薪(天)',y+'年已用病假(次)',y+'年无薪(天)'],emps.map(p=>[p.name,p.dept||'',p.leave_balance==null?0:p.leave_balance,p.sick_balance==null?0:p.sick_balance,p.leave_expiry?dmy(p.leave_expiry):'',sum(used(p.id,'paid')),used(p.id,'sick').length,sum(used(p.id,'unpaid'))]));
+}
+
 function tabLeave(){
   const emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
   const inp=(p,k,t)=>'<input type="'+t+'" '+(t==='number'?'min="0" step="'+(k==='sick_balance'?'1':'0.5')+'"':'')+' style="margin:0;padding:6px;width:'+(t==='date'?'150px':'80px')+'" value="'+esc(p[k]==null?'':p[k])+'" onchange="setProf(\''+esc(p.id)+'\',{'+k+':'+(t==='number'?'Math.max(0,'+(k==='sick_balance'?'Math.round(parseFloat(this.value)||0)':'parseFloat(this.value)||0')+')':'this.value||null')+'})">';
   const r1=emps.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+inp(p,'leave_balance','number')+'</td><td>'+inp(p,'sick_balance','number')+'</td><td>'+inp(p,'leave_expiry','date')+'</td></tr>').join('');
   const r2=LV.filter(l=>l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth).map(l=>'<tr><td>'+esc(nameOf(l.user_id))+'</td><td>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</td><td>'+l.days+'</td><td>'+lvKind(l)+'</td><td>'+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+'</td><td>'+(l.kind==='sick'?(l.mc_path?'<a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">查看</a>':'<span class="red">未上传</span>'):'')+'</td><td>'+lvStat(l)+'</td><td>'+(l.status==='approved'?'<button class="btn danger" style="padding:6px 10px" onclick="leaveCancel(\''+esc(l.id)+'\')">驳回</button>':'')+'</td></tr>').join('');
   return '<div class="card"><h3>员工有薪假期设置</h3><div class="table"><table><tr><th>员工</th><th>有薪余额（天）</th><th>病假余额（次）</th><th>到期日（共用）</th></tr>'+(r1||'<tr><td colspan="4" class="muted">没有员工</td></tr>')+'</table></div><p class="muted">每个员工的天数、次数和到期日可以不一样，改完自动保存。有薪假期和病假共用同一个到期日；病假按次数计，每提交一次用掉 1 次。</p></div>'+
-   '<div class="card"><div class="row between"><h3 style="margin:0">请假记录</h3>'+monthBar()+'</div><div class="table"><table><tr><th>员工</th><th>日期</th><th>天数</th><th>类型</th><th>原因</th><th>MC</th><th>状态</th><th></th></tr>'+(r2||'<tr><td colspan="8" class="muted">这个月没有请假记录</td></tr>')+'</table></div></div>';
+   '<div class="card"><div class="row between"><h3 style="margin:0">请假记录</h3>'+monthBar()+'</div><div class="row" style="margin:8px 0"><button class="btn secondary" onclick="leaveCsv(\'month\')">⬇ 下载本月报告</button><button class="btn secondary" onclick="leaveCsv(\'year\')">⬇ 下载全年报告</button><button class="btn secondary" onclick="leaveBalCsv()">⬇ 下载余额汇总</button></div><div class="table"><table><tr><th>员工</th><th>日期</th><th>天数</th><th>类型</th><th>原因</th><th>MC</th><th>状态</th><th></th></tr>'+(r2||'<tr><td colspan="8" class="muted">这个月没有请假记录</td></tr>')+'</table></div></div>';
 }
 
 async function setProf(id,patch){await guard(async()=>{const r=await sb.from('profiles').update(patch).eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已保存')})}
