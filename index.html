@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#123B7A">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="AKAIDO">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>AKAIDO Sales System V3.0</title>
@@ -1066,6 +1069,7 @@ async function devApprove(id){await guard(async()=>{const {error}=await sb.rpc('
 async function devDel(id){if(!confirm('确定取消绑定？此手机需重新申请。'))return;await guard(async()=>{const r=await sb.from('hr_devices').delete().eq('id',id);if(r.error)throw r.error;await loadDev();renderHR();toast('已处理')})}
 
 /* ========== 启动 ========== */
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 (async function init(){
   ['lu','lp'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()}));
   if(!window.supabase){loginMsg('无法加载网络组件，请检查网络后刷新页面');return}
