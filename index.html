@@ -381,17 +381,18 @@ const txtNo=v=>v?'\t'+v:'';   // 电话前加 Tab，Excel 不会吞掉开头的 
 function exportCustomers(){
   if(!me||isStaff())return;
   const admin=isAdmin();
-  const list=D.customers.filter(c=>admin||c.owner_id===me.id).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const fs=admin&&$('ex_s')?$('ex_s').value:'',fg=$('ex_g')?$('ex_g').value:'',fb=$('ex_b')?$('ex_b').value:'';
+  const list=D.customers.filter(c=>(admin||c.owner_id===me.id)&&(!fs||c.owner_id===fs)&&(!fg||c.grade===fg)&&(!fb||(c.is_customer||'No')===fb)).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   if(!list.length){toast('没有客户可导出');return}
   const pm=potMap();
   const header=['客户名称','Sales','等级','联系人','电话','未获取电话号码','地址','账期','付款方式','Kow Hock / Franchise','已成为客户','竞品','产品','下次跟进','潜在订单(RM)','备注'];
   const rows=list.map(c=>[c.name,nameOf(c.owner_id),c.grade,c.contact,txtNo(c.phone),txtNo(c.office_no),c.address,c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天',c.payment_method||'Cheque',c.kow_hock||'No',custTxt(c.is_customer),c.competitor,c.products,c.follow_up,Number(pm.get(c.id)||0).toFixed(2),c.remarks]);
-  dlCSV('AKAIDO-客户明细-'+(admin?'全部':me.name)+'-'+ymd()+'.csv',header,rows);
+  dlCSV('AKAIDO-客户明细-'+(admin?(fs?nameOf(fs):'全部'):me.name)+'-'+ymd()+'.csv',header,rows);
   toast('已导出 '+list.length+' 位客户');
 }
 function renderCustomers(){
   $('customers').innerHTML='<h2>👥 客户 CRM</h2>'+(custErr?'<div class="banner">客户数据读取失败：'+esc(custErr)+'（请确认已运行 staff-customers.sql）</div>':'')+'<div class="card"><button class="btn full" onclick="customerForm()">＋ 新增客户</button></div>'+
-    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()">'+(isStaff()?'':'<button class="btn secondary full" style="margin-bottom:10px" onclick="exportCustomers()">⬇ 下载客户明细（CSV）</button>')+'<div id="clist">'+custList('')+'</div></div>';
+    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()">'+(isStaff()?'':'<div class="row" style="margin-bottom:10px">'+(isAdmin()?'<select id="ex_s" style="width:auto;margin:0"><option value="">全部 Sales</option>'+D.profiles.filter(p=>p.role==='sales').map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select>':'')+'<select id="ex_g" style="width:auto;margin:0"><option value="">全部等级</option><option>A</option><option>B</option><option>C</option></select><select id="ex_b" style="width:auto;margin:0"><option value="">全部状态</option><option value="No">No</option><option value="Yes">Yes</option><option value="Blacklist">Black list</option></select><button class="btn secondary" onclick="exportCustomers()">⬇ 下载客户资料（CSV）</button></div>')+'<div id="clist">'+custList('')+'</div></div>';
 }
 function showCustomer(id){
   showSection('customers');
@@ -506,19 +507,30 @@ function visitItem(v,showCustomer){
     (v.products_interest?'<br>产品：'+esc(v.products_interest):'')+(v.need?'<br>需求：'+esc(v.need):'')+(v.feedback?'<br>反馈：'+esc(v.feedback):'')+(v.competitor?'<br>竞品/价格：'+esc(v.competitor):'')+
     '<br>潜在订单：<b>'+money(v.potential_order)+'</b>'+(v.next_follow_up?' · 下次跟进：'+esc(v.next_follow_up):'')+'</div>';
 }
-let vDate='';
+let vDate=ymd(),vQ='';
 function filterVisits(){vDate=$('vDate').value||'';renderVisitsBody()}
 function clearVisitDate(){vDate='';renderVisits()}
+function todayVisits(){vDate=ymd();renderVisits()}
+function filterVisitQ(){vQ=$('vq').value.trim().toLowerCase();renderVisitsBody()}
+function visitFiltered(){
+  return D.visits.filter(v=>(!vDate||onDate(v.created_at,vDate))&&(!vQ||[custName(v.customer_id),nameOf(v.sales_id),v.products_interest,v.need,v.feedback,v.competitor].join(' ').toLowerCase().includes(vQ)));
+}
 function renderVisits(){
   $('visits').innerHTML='<h2>📝 拜访记录</h2><div class="card"><button class="btn full" onclick="visitPicker()">＋ 新增拜访</button></div>'+
-    '<div class="card"><div class="row between"><h3 style="margin:0">查看日期</h3><div class="row" style="gap:6px"><input id="vDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+esc(vDate)+'" onchange="filterVisits()">'+(vDate?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="clearVisitDate()">全部</button>':'')+'</div></div></div>'+
-    '<div id="vBody"></div>';
+    '<div class="card"><div class="row between"><h3 style="margin:0">查看日期</h3><div class="row" style="gap:6px"><input id="vDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+esc(vDate)+'" onchange="filterVisits()">'+(vDate?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="clearVisitDate()">全部</button>':'')+(vDate!==ymd()?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="todayVisits()">今天</button>':'')+'</div></div>'+
+    '<input id="vq" placeholder="搜索客户 / Sales / 产品 / 需求 / 反馈" style="margin-top:10px" value="'+esc(vQ)+'" oninput="filterVisitQ()"><button class="btn secondary full" onclick="exportVisits()">⬇ 下载拜访记录（CSV）</button><p class="muted" style="margin:6px 0 0">下载的是下面列出的这些记录（按所选日期和搜索）。</p></div><div id="vBody"></div>';
   renderVisitsBody();
 }
 function renderVisitsBody(){
-  const list=vDate?D.visits.filter(v=>onDate(v.created_at,vDate)):D.visits.slice(0,100);
-  const title=vDate?'拜访记录（'+esc(vDate)+'）':'拜访记录（最近 100 条）';
-  $('vBody').innerHTML='<div class="card"><h3>'+title+'</h3>'+(list.length?list.map(v=>visitItem(v,true)).join(''):'<div class="muted">'+(vDate?'这一天没有拜访记录':'还没有拜访记录')+'</div>')+(!vDate&&D.visits.length>100?'<p class="muted">仅显示最近 100 条，选择日期可查看更早的记录</p>':'')+'</div>';
+  const all=visitFiltered(),list=vDate?all:all.slice(0,100);
+  const title=vDate?'拜访记录（'+esc(vDate===ymd()?'今天':vDate)+'）':'拜访记录（全部日期'+(all.length>100?'，显示最近 100 条':'')+'）';
+  $('vBody').innerHTML='<div class="card"><h3>'+title+' · '+all.length+' 条</h3>'+(list.length?list.map(v=>visitItem(v,true)).join(''):'<div class="muted">没有符合的拜访记录</div>')+'</div>';
+}
+function exportVisits(){
+  const list=visitFiltered().slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
+  if(!list.length){toast('没有可下载的拜访记录');return}
+  dlCSV('AKAIDO-拜访记录-'+(vDate||'全部日期')+'.csv',['日期时间','Sales','客户','见到老板','产品 / 促销项目','客户需求','客户反馈','竞品 / 价格','潜在订单(RM)','下次跟进','位置'],list.map(v=>[fmt(v.created_at),nameOf(v.sales_id),custName(v.customer_id),v.met_owner?'是':'否',v.products_interest||'',v.need||'',v.feedback||'',v.competitor||'',Number(v.potential_order||0).toFixed(2),v.next_follow_up||'',gpsText(v.lat,v.lng)]));
+  toast('已导出 '+list.length+' 条记录');
 }
 function pickerList(q){
   const list=D.customers.filter(c=>!q||[c.name,c.contact,c.phone,c.office_no,c.address].join(' ').toLowerCase().includes(q));
@@ -740,7 +752,7 @@ function calc(r){
   if(a-st>s.late_grace_min)o.late=a-st;
   if(b==null){if(r.work_date<klDate(Date.now()))o.note='忘记下班打卡';return o}
   if(b<en)o.early=en-b;
-  else if(b-en>s.ot_grace_min){const u=s.ot_unit==='exact'?1:+s.ot_unit;o.ot=Math.floor((b-en-s.ot_grace_min)/u)*u}
+  else if(b-en>s.ot_grace_min){o.ot=b-en}   // 超过门槛才有 OT；有 OT 时从下班时间起算，每一分钟都算
   return o;
 }
 function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
@@ -1034,11 +1046,11 @@ async function schDel(id){if(!confirm('确定删除？使用它的员工会变�
 function tabSet(){
   const s=H.settings;
   const rows=H.locations.map(l=>'<tr><td>'+esc(l.name)+'</td><td>'+gpsText(l.lat,l.lng)+'</td><td><input type="number" min="10" style="width:72px;margin:0;padding:6px" value="'+l.radius_m+'" onchange="lcSet(\''+esc(l.id)+'\',{radius_m:Math.max(10,parseInt(this.value,10)||150)})">m</td><td><input type="checkbox" style="width:auto;margin:0" '+(l.active?'checked':'')+' onchange="lcSet(\''+esc(l.id)+'\',{active:this.checked})"></td><td><button class="btn danger" style="padding:6px 10px" onclick="lcDel(\''+esc(l.id)+'\')">删除</button></td></tr>').join('');
-  return '<div class="card"><h3>OT 与迟到设置</h3><label>OT 宽限（分钟）：下班后超过这个时间才开始算 OT，宽限的时间会被扣掉</label><input id="st_g" type="number" min="0" value="'+s.ot_grace_min+'"><label>OT 计算单位</label><select id="st_u">'+[['exact','精确分钟'],['30','30 分钟'],['60','1 小时']].map(o=>'<option value="'+o[0]+'"'+(s.ot_unit===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select><label>迟到宽限（分钟）</label><input id="st_l" type="number" min="0" value="'+s.late_grace_min+'"><label>提早下班免写理由的宽限（分钟）：比下班时间早不超过这个分钟数，不用写理由</label><input id="st_e" type="number" min="0" value="'+(s.early_grace_min==null?2:s.early_grace_min)+'"><label><input type="checkbox" id="st_f" style="width:auto;margin:0 6px 0 0" '+(s.enforce_geofence?'checked':'')+'>强制 GPS 围栏（范围外不能打卡）</label><button class="btn full" onclick="setSave()">保存设置</button></div>'+
+  return '<div class="card"><h3>OT 与迟到设置</h3><label>OT 起算门槛（分钟）：下班后超过这个分钟数才有 OT；有 OT 时从下班时间开始算，精确到每一分钟</label><input id="st_g" type="number" min="0" value="'+s.ot_grace_min+'"><label>迟到宽限（分钟）</label><input id="st_l" type="number" min="0" value="'+s.late_grace_min+'"><label>提早下班免写理由的宽限（分钟）：比下班时间早不超过这个分钟数，不用写理由</label><input id="st_e" type="number" min="0" value="'+(s.early_grace_min==null?2:s.early_grace_min)+'"><label><input type="checkbox" id="st_f" style="width:auto;margin:0 6px 0 0" '+(s.enforce_geofence?'checked':'')+'>强制 GPS 围栏（范围外不能打卡）</label><button class="btn full" onclick="setSave()">保存设置</button></div>'+
    '<div class="card"><h3>打卡地点</h3><div class="table"><table><tr><th>名称</th><th>坐标</th><th>半径</th><th>启用</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有地点，目前不检查 GPS 围栏</td></tr>')+'</table></div><label>名称</label><input id="lc_n" placeholder="AKAIDO Office"><div class="row"><div style="flex:1"><label>纬度</label><input id="lc_a" inputmode="decimal"></div><div style="flex:1"><label>经度</label><input id="lc_o" inputmode="decimal"></div></div><label>半径（米，建议 100–200）</label><input id="lc_r" type="number" value="150"><div class="row"><button class="btn secondary" onclick="lcHere()">📍 用我现在的位置</button><button class="btn" onclick="lcAdd()">新增地点</button></div><p class="muted">人站在公司里点「用我现在的位置」最准确。</p></div>';
 }
 async function setSave(){await guard(async()=>{
-  const base={ot_grace_min:Math.max(0,+$('st_g').value||0),ot_unit:$('st_u').value,late_grace_min:Math.max(0,+$('st_l').value||0),early_grace_min:Math.max(0,+$('st_e').value||0),enforce_geofence:$('st_f').checked};
+  const base={ot_grace_min:Math.max(0,+$('st_g').value||0),late_grace_min:Math.max(0,+$('st_l').value||0),early_grace_min:Math.max(0,+$('st_e').value||0),enforce_geofence:$('st_f').checked};
   const r=await sb.from('hr_settings').update(base).eq('id',1);
   if(r.error)throw r.error;
   await loadHR();renderHR();toast('设置已保存');
