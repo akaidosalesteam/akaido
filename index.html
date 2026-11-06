@@ -297,9 +297,11 @@ function getPos(timeout){
   });
 }
 function geoMsg(e){return e&&e.code===1?'请允许网页使用定位权限':e&&e.code===2?'定位失败，请到信号好的地方重试':e&&e.code===3?'定位超时，请重试':'此浏览器不支持定位'}
-let ckDate=ymd();
+let ckDate=ymd(),ckSales='',vSales='';
+const salesOpts=sel=>'<option value="">全部 Sales</option>'+D.profiles.filter(p=>p.role==='sales').slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(p=>'<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+(p.active?'':'（已停用）')+'</option>').join('');
 function onDate(x,d){return ymd(new Date(x))===d}
 function filterCheckin(){ckDate=$('ckDate').value||ymd();renderCheckinBody()}
+function filterCheckinSales(){ckSales=$('ckSales').value;if($('exSales'))$('exSales').value=ckSales;renderCheckinBody()}   // 下载栏的 Sales 默认跟着这里选的
 function renderCheckin(){
   const custs=(isAdmin()?D.customers:D.customers.filter(c=>c.owner_id===me.id)).slice().sort((a,b)=>a.name.localeCompare(b.name));
   const custOpts='<option value="">请选择客户…</option>'+custs.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
@@ -307,24 +309,25 @@ function renderCheckin(){
     '<label>这次打卡是去拜访哪位客户？（必选）</label><select id="ckCust">'+custOpts+'</select>'+(custs.length?'':'<p class="red" style="margin:0 0 8px">你还没有客户，请先到「客户」页新增客户，才能打卡。</p>')+
     '<div class="row"><button class="btn" onclick="attend(\'IN\')">📍 CHECK IN</button><button class="btn secondary" onclick="attend(\'OUT\')">🏁 CHECK OUT</button></div>'+
     '<p class="muted">今日状态：'+(D.attendance.some(a=>a.user_id===me.id&&a.type==='IN'&&isToday(a.created_at))?'已 Check In':'尚未 Check In')+'。打卡会记录 GPS 位置，请在弹出的提示里选择「允许」。</p></div>'+
-    '<div class="card"><div class="row between"><h3 style="margin:0">查看日期</h3><input id="ckDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div></div>'+
+    '<div class="card">'+(isAdmin()?'<div class="row" style="flex-wrap:nowrap;gap:8px"><select id="ckSales" style="flex:1;min-width:0;margin:0" onchange="filterCheckinSales()">'+salesOpts(ckSales)+'</select><input id="ckDate" type="date" style="width:auto;flex:none;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div>':'<div class="row between"><h3 style="margin:0">查看日期</h3><input id="ckDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div>')+'</div>'+
     '<div id="ckBody"></div>'+
-    '<div class="card"><h3>导出打卡记录</h3><div class="row"><input id="exFrom" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd(new Date(Date.now()-6*86400000))+'"><span class="muted">至</span><input id="exTo" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd()+'"></div><button class="btn secondary full" onclick="exportAttendance()">⬇ 下载这段日期的打卡记录（CSV）</button><p class="muted">可用 Excel 打开。'+(isAdmin()?'导出全部 Sales 的记录。':'只导出我自己的记录。')+'</p></div>';
+    '<div class="card"><h3>导出打卡记录</h3>'+(isAdmin()?'<label>选择 Sales</label><select id="exSales">'+salesOpts(ckSales)+'</select>':'')+'<div class="row"><input id="exFrom" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd(new Date(Date.now()-6*86400000))+'"><span class="muted">至</span><input id="exTo" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd()+'"></div><button class="btn secondary full" onclick="exportAttendance()">⬇ 下载这段日期的打卡记录（CSV）</button><p class="muted">可用 Excel 打开。'+(isAdmin()?'不选 Sales 就导出全部。':'只导出我自己的记录。')+'</p></div>';
   renderCheckinBody();
 }
 function exportAttendance(){
   const from=$('exFrom').value,to=$('exTo').value;
   if(!from||!to){toast('请选择开始和结束日期');return}
   if(from>to){toast('开始日期不能晚于结束日期');return}
-  const list=D.attendance.filter(a=>{const d=ymd(new Date(a.created_at));return d>=from&&d<=to}).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
-  if(!list.length){toast('这段日期没有打卡记录');return}
+  const fs=isAdmin()&&$('exSales')?$('exSales').value:'';
+  const list=D.attendance.filter(a=>{const d=ymd(new Date(a.created_at));return d>=from&&d<=to&&(!fs||a.user_id===fs)}).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
+  if(!list.length){toast(fs?nameOf(fs)+' 这段日期没有打卡记录':'这段日期没有打卡记录');return}
   const header=['Sales','类型','时间','客户','纬度','经度','精度(m)'];
   const rows=list.map(a=>[nameOf(a.user_id),a.type,fmt(a.created_at),custName(a.customer_id)||'',a.lat!=null?a.lat:'',a.lng!=null?a.lng:'',a.accuracy!=null?Math.round(a.accuracy):'']);
   const csvEsc=s=>{s=String(s==null?'':s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
   const csv='\uFEFF'+[header,...rows].map(r=>r.map(csvEsc).join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);a.download='AKAIDO-打卡记录-'+from+'_to_'+to+'.csv';
+  a.href=URL.createObjectURL(blob);a.download='AKAIDO-打卡记录-'+(fs?nameOf(fs)+'-':'')+from+'_to_'+to+'.csv';
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   toast('已导出 '+list.length+' 条记录');
@@ -335,8 +338,8 @@ function renderCheckinBody(){
   let h='<div class="card"><h3>我的记录（'+esc(label)+'）</h3>'+(mine.length?mine.map(a=>
     '<div class="item"><b>'+esc(a.type)+'</b> · '+fmt(a.created_at)+(a.customer_id?'<br>客户：<span class="red">'+esc(custName(a.customer_id))+'</span>':'')+'<br><small>GPS '+gpsText(a.lat,a.lng)+' · 精度 '+(a.accuracy!=null?Math.round(a.accuracy)+'m':'-')+' · '+mapLink(a.lat,a.lng)+'</small></div>').join(''):'<div class="muted">这一天没有打卡记录</div>')+'</div>';
   if(isAdmin()){
-    const list=D.attendance.filter(a=>onDate(a.created_at,d));
-    h+='<div class="card"><h3>全部 Sales 打卡记录（'+esc(label)+'）</h3><div class="table"><table><tr><th>Sales</th><th>类型</th><th>时间</th><th>客户</th><th>位置</th><th>精度</th></tr>'+
+    const list=D.attendance.filter(a=>onDate(a.created_at,d)&&(!ckSales||a.user_id===ckSales));
+    h+='<div class="card"><h3>'+(ckSales?esc(nameOf(ckSales)):'全部 Sales')+' 打卡记录（'+esc(label)+'）· '+list.length+' 条</h3><div class="table"><table><tr><th>Sales</th><th>类型</th><th>时间</th><th>客户</th><th>位置</th><th>精度</th></tr>'+
       (list.length?list.map(a=>'<tr><td>'+esc(nameOf(a.user_id))+'</td><td>'+esc(a.type)+'</td><td>'+fmt(a.created_at)+'</td><td>'+(a.customer_id?'<span class="red">'+esc(custName(a.customer_id))+'</span>':'-')+'</td><td>'+mapLink(a.lat,a.lng)+'</td><td>'+(a.accuracy!=null?Math.round(a.accuracy)+'m':'-')+'</td></tr>').join(''):'<tr><td colspan="6" class="muted">这一天没有记录</td></tr>')+'</table></div></div>';
   }
   $('ckBody').innerHTML=h;
@@ -511,25 +514,28 @@ let vDate=ymd(),vQ='';
 function filterVisits(){vDate=$('vDate').value||'';renderVisitsBody()}
 function clearVisitDate(){vDate='';renderVisits()}
 function todayVisits(){vDate=ymd();renderVisits()}
+function filterVisitSales(){vSales=$('vSales').value;renderVisitsBody()}
 function filterVisitQ(){vQ=$('vq').value.trim().toLowerCase();renderVisitsBody()}
 function visitFiltered(){
-  return D.visits.filter(v=>(!vDate||onDate(v.created_at,vDate))&&(!vQ||[custName(v.customer_id),nameOf(v.sales_id),v.products_interest,v.need,v.feedback,v.competitor].join(' ').toLowerCase().includes(vQ)));
+  return D.visits.filter(v=>(!vDate||onDate(v.created_at,vDate))&&(!vSales||v.sales_id===vSales)&&(!vQ||[custName(v.customer_id),nameOf(v.sales_id),v.products_interest,v.need,v.feedback,v.competitor].join(' ').toLowerCase().includes(vQ)));
 }
 function renderVisits(){
+  const dIn='<input id="vDate" type="date" style="width:auto;flex:none;margin:0" max="'+ymd()+'" value="'+esc(vDate)+'" onchange="filterVisits()">';
+  const bt=(vDate?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="clearVisitDate()">全部日期</button>':'')+(vDate!==ymd()?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="todayVisits()">今天</button>':'');
   $('visits').innerHTML='<h2>📝 拜访记录</h2><div class="card"><button class="btn full" onclick="visitPicker()">＋ 新增拜访</button></div>'+
-    '<div class="card"><div class="row between"><h3 style="margin:0">查看日期</h3><div class="row" style="gap:6px"><input id="vDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+esc(vDate)+'" onchange="filterVisits()">'+(vDate?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="clearVisitDate()">全部</button>':'')+(vDate!==ymd()?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="todayVisits()">今天</button>':'')+'</div></div>'+
-    '<input id="vq" placeholder="搜索客户 / Sales / 产品 / 需求 / 反馈" style="margin-top:10px" value="'+esc(vQ)+'" oninput="filterVisitQ()"><button class="btn secondary full" onclick="exportVisits()">⬇ 下载拜访记录（CSV）</button><p class="muted" style="margin:6px 0 0">下载的是下面列出的这些记录（按所选日期和搜索）。</p></div><div id="vBody"></div>';
+    '<div class="card">'+(isAdmin()?'<div class="row" style="flex-wrap:nowrap;gap:8px"><select id="vSales" style="flex:1;min-width:0;margin:0" onchange="filterVisitSales()">'+salesOpts(vSales)+'</select>'+dIn+'</div>'+(bt?'<div class="row" style="gap:6px;margin-top:8px">'+bt+'</div>':''):'<div class="row between"><h3 style="margin:0">查看日期</h3><div class="row" style="gap:6px">'+dIn+bt+'</div></div>')+
+    '<input id="vq" placeholder="搜索客户 / Sales / 产品 / 需求 / 反馈" style="margin-top:10px" value="'+esc(vQ)+'" oninput="filterVisitQ()"><button class="btn secondary full" onclick="exportVisits()">⬇ 下载拜访记录（CSV）</button><p class="muted" style="margin:6px 0 0">下载的是下面列出的这些记录（按所选日期、Sales 和搜索）。</p></div><div id="vBody"></div>';
   renderVisitsBody();
 }
 function renderVisitsBody(){
   const all=visitFiltered(),list=vDate?all:all.slice(0,100);
-  const title=vDate?'拜访记录（'+esc(vDate===ymd()?'今天':vDate)+'）':'拜访记录（全部日期'+(all.length>100?'，显示最近 100 条':'')+'）';
+  const title=(vSales?esc(nameOf(vSales))+' ':'')+(vDate?'拜访记录（'+esc(vDate===ymd()?'今天':vDate)+'）':'拜访记录（全部日期'+(all.length>100?'，显示最近 100 条':'')+'）');
   $('vBody').innerHTML='<div class="card"><h3>'+title+' · '+all.length+' 条</h3>'+(list.length?list.map(v=>visitItem(v,true)).join(''):'<div class="muted">没有符合的拜访记录</div>')+'</div>';
 }
 function exportVisits(){
   const list=visitFiltered().slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
   if(!list.length){toast('没有可下载的拜访记录');return}
-  dlCSV('AKAIDO-拜访记录-'+(vDate||'全部日期')+'.csv',['日期时间','Sales','客户','见到老板','产品 / 促销项目','客户需求','客户反馈','竞品 / 价格','潜在订单(RM)','下次跟进','位置'],list.map(v=>[fmt(v.created_at),nameOf(v.sales_id),custName(v.customer_id),v.met_owner?'是':'否',v.products_interest||'',v.need||'',v.feedback||'',v.competitor||'',Number(v.potential_order||0).toFixed(2),v.next_follow_up||'',gpsText(v.lat,v.lng)]));
+  dlCSV('AKAIDO-拜访记录-'+(vSales?nameOf(vSales)+'-':'')+(vDate||'全部日期')+'.csv',['日期时间','Sales','客户','见到老板','产品 / 促销项目','客户需求','客户反馈','竞品 / 价格','潜在订单(RM)','下次跟进','位置'],list.map(v=>[fmt(v.created_at),nameOf(v.sales_id),custName(v.customer_id),v.met_owner?'是':'否',v.products_interest||'',v.need||'',v.feedback||'',v.competitor||'',Number(v.potential_order||0).toFixed(2),v.next_follow_up||'',gpsText(v.lat,v.lng)]));
   toast('已导出 '+list.length+' 条记录');
 }
 function pickerList(q){
