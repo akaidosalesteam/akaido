@@ -359,11 +359,23 @@ async function attend(type){
 }
 
 /* ========== 客户 ========== */
+let cfS='',cfG='',cfB='';   // 客户页筛选：Sales / 等级 / 状态
+const cfActive=()=>!!(cfS||cfG||cfB);
+function syncCustFilters(){
+  if($('ex_s'))cfS=$('ex_s').value;
+  if($('ex_g'))cfG=$('ex_g').value;
+  if($('ex_b'))cfB=$('ex_b').value;
+}
+function custFiltered(q){
+  const admin=isAdmin();
+  return D.customers.filter(c=>(!cfS||c.owner_id===cfS)&&(!cfG||c.grade===cfG)&&(!cfB||(c.is_customer||'No')===cfB)&&(!q||[c.name,c.contact,c.phone,c.office_no,c.address,admin?nameOf(c.owner_id):''].join(' ').toLowerCase().includes(q)));
+}
+function clearCustFilters(){cfS=cfG=cfB='';renderCustomers()}
 function custList(q){
   const pm=potMap(),admin=isAdmin(),today=ymd();
-  const list=D.customers.filter(c=>!q||[c.name,c.contact,c.phone,c.office_no,c.address,admin?nameOf(c.owner_id):''].join(' ').toLowerCase().includes(q));
-  if(!list.length)return '<div class="muted" style="margin-top:8px">'+(q?'没有符合的客户':'还没有客户，点上方「新增客户」')+'</div>';
-  return list.map(c=>{
+  const list=custFiltered(q);
+  if(!list.length)return '<div class="muted" style="margin-top:8px">'+((q||cfActive())?'没有符合的客户':'还没有客户，点上方「新增客户」')+'</div>'+(cfActive()?'<button class="btn secondary" style="margin-top:8px" onclick="clearCustFilters()">清除筛选</button>':'');
+  return '<div class="row between" style="margin:2px 0 4px"><span class="muted">共 '+list.length+' 位'+(cfActive()?'（已筛选）':'')+'</span>'+(cfActive()?'<button class="btn secondary" style="padding:6px 10px" onclick="clearCustFilters()">清除筛选</button>':'')+'</div>'+list.map(c=>{
     const overdue=c.follow_up&&c.follow_up<=today;
     return '<div class="item"><div class="row between"><b>'+esc(c.name)+'</b><div class="row" style="gap:6px;width:auto">'+((c.kow_hock||'No')==='Yes'?'<span class="badge" style="background:#fde8e8;color:#b42318">Kow Hock</span>':'')+(c.is_customer==='Blacklist'?'<span class="badge" style="background:#111;color:#fff">Black list</span>':(c.is_customer||'No')==='Yes'?'<span class="badge" style="background:#e8f7ee;color:#16834a">已是客户</span>':'<span class="badge" style="background:#eee;color:#666">未成为客户</span>')+'<span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="badge" style="background:#e8eef8;color:#123B7A">'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天')+'</span><span class="badge" style="background:#eee;color:#444">'+esc(c.payment_method||'Cheque')+'</span></div></div>'+
       '<small>'+esc(c.contact||'-')+' · '+esc(c.phone||'-')+(c.office_no?' · 未获取电话号码：'+esc(c.office_no):'')+'</small><br><small>'+esc(c.address||'-')+'</small>'+
@@ -371,7 +383,7 @@ function custList(q){
       '<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="showCustomer(\''+esc(c.id)+'\')">'+(isStaff()?'详情':'详情/历史')+'</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button>'+(isStaff()?'':'<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button>')+'</div></div>';
   }).join('');
 }
-function filterCustomers(){$('clist').innerHTML=custList($('cq').value.trim().toLowerCase())}
+function filterCustomers(){syncCustFilters();$('clist').innerHTML=custList($('cq').value.trim().toLowerCase())}
 function dlCSV(filename,header,rows){
   const esc2=v=>{v=String(v==null?'':v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   const csv='\uFEFF'+[header,...rows].map(r=>r.map(esc2).join(',')).join('\r\n');
@@ -384,18 +396,21 @@ const txtNo=v=>v?'\t'+v:'';   // 电话前加 Tab，Excel 不会吞掉开头的 
 function exportCustomers(){
   if(!me||isStaff())return;
   const admin=isAdmin();
-  const fs=admin&&$('ex_s')?$('ex_s').value:'',fg=$('ex_g')?$('ex_g').value:'',fb=$('ex_b')?$('ex_b').value:'';
-  const list=D.customers.filter(c=>(admin||c.owner_id===me.id)&&(!fs||c.owner_id===fs)&&(!fg||c.grade===fg)&&(!fb||(c.is_customer||'No')===fb)).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  syncCustFilters();
+  const q=$('cq')?$('cq').value.trim().toLowerCase():'';
+  const list=custFiltered(q).filter(c=>admin||c.owner_id===me.id).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   if(!list.length){toast('没有客户可导出');return}
   const pm=potMap();
   const header=['客户名称','Sales','等级','联系人','电话','未获取电话号码','地址','账期','付款方式','Kow Hock / Franchise','已成为客户','竞品','产品','下次跟进','潜在订单(RM)','备注'];
   const rows=list.map(c=>[c.name,nameOf(c.owner_id),c.grade,c.contact,txtNo(c.phone),txtNo(c.office_no),c.address,c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天',c.payment_method||'Cheque',c.kow_hock||'No',custTxt(c.is_customer),c.competitor,c.products,c.follow_up,Number(pm.get(c.id)||0).toFixed(2),c.remarks]);
-  dlCSV('AKAIDO-客户明细-'+(admin?(fs?nameOf(fs):'全部'):me.name)+'-'+ymd()+'.csv',header,rows);
+  dlCSV('AKAIDO-客户明细-'+(admin?(cfS?nameOf(cfS):'全部'):me.name)+(cfG?'-'+cfG+'级':'')+(cfB?'-'+cfB:'')+'-'+ymd()+'.csv',header,rows);
   toast('已导出 '+list.length+' 位客户');
 }
 function renderCustomers(){
+  const gradeOpts='<option value="">全部等级</option>'+['A','B','C'].map(g=>'<option'+(cfG===g?' selected':'')+'>'+g+'</option>').join('');
+  const statOpts='<option value="">全部状态</option>'+[['No','No'],['Yes','Yes'],['Blacklist','Black list']].map(o=>'<option value="'+o[0]+'"'+(cfB===o[0]?' selected':'')+'>'+o[1]+'</option>').join('');
   $('customers').innerHTML='<h2>👥 客户 CRM</h2>'+(custErr?'<div class="banner">客户数据读取失败：'+esc(custErr)+'（请确认已运行 staff-customers.sql）</div>':'')+'<div class="card"><button class="btn full" onclick="customerForm()">＋ 新增客户</button></div>'+
-    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()">'+(isStaff()?'':'<div class="row" style="margin-bottom:10px">'+(isAdmin()?'<select id="ex_s" style="width:auto;margin:0"><option value="">全部 Sales</option>'+D.profiles.filter(p=>p.role==='sales').map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select>':'')+'<select id="ex_g" style="width:auto;margin:0"><option value="">全部等级</option><option>A</option><option>B</option><option>C</option></select><select id="ex_b" style="width:auto;margin:0"><option value="">全部状态</option><option value="No">No</option><option value="Yes">Yes</option><option value="Blacklist">Black list</option></select><button class="btn secondary" onclick="exportCustomers()">⬇ 下载客户资料（CSV）</button></div>')+'<div id="clist">'+custList('')+'</div></div>';
+    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()">'+(isStaff()?'':'<div class="row" style="margin-bottom:10px">'+(isAdmin()?'<select id="ex_s" style="width:auto;margin:0" onchange="filterCustomers()">'+salesOpts(cfS)+'</select>':'')+'<select id="ex_g" style="width:auto;margin:0" onchange="filterCustomers()">'+gradeOpts+'</select><select id="ex_b" style="width:auto;margin:0" onchange="filterCustomers()">'+statOpts+'</select><button class="btn secondary" onclick="exportCustomers()">⬇ 下载客户资料（CSV）</button></div><p class="muted" style="margin:-4px 0 10px">选择后会筛选下面的列表；下载的就是列表里的这些客户。</p>')+'<div id="clist">'+custList('')+'</div></div>';
 }
 function showCustomer(id){
   showSection('customers');
