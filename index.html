@@ -758,22 +758,35 @@ async function loadHR0(){
   }catch(e){H.outOk=false;H.outs=[];H.todayOuts=[]}
 }
 
-/* 迟到 / 早退 / OT：规则用打卡当天的快照；休息日工时单独列出，不算 OT */
+/* 迟到 / 早退 / OT：规则用打卡当天的快照；休息日工时单独列出，不算 OT；星期六另有规则（见 calc） */
+const SAT_OT_FROM=14*60;
+const isSat=d=>!!d&&new Date(d+'T00:00:00Z').getUTCDay()===6;
 function calc(r){
   const o={late:0,early:0,ot:0,rest:0,worked:0,note:''},s=H.settings;
   if(!r.clock_in)return o;
   const a=klMin(r.clock_in);let b=null;
   if(r.clock_out){b=klMin(r.clock_out)+(klDate(r.clock_out)>r.work_date?1440:0);o.worked=Math.max(0,b-a)}
-  const rule=r.sched_rule;
+  const rule=r.sched_rule,sat=isSat(r.work_date);
   if(!rule){o.note='未设置 Schedule';return o}
-  if(rule==='OFF'){o.rest=o.worked;o.note='休息日';return o}
-  const m=/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(rule);
-  if(!m){o.note='规则格式错误';return o}
-  const st=+m[1]*60+ +m[2],en=+m[3]*60+ +m[4];
-  if(a-st>s.late_grace_min)o.late=a-st;
-  if(b==null){if(r.work_date<klDate(Date.now()))o.note='忘记下班打卡';return o}
-  if(b<en)o.early=en-b;
-  else if(b-en>s.ot_grace_min){o.ot=b-en}   // 超过门槛才有 OT；有 OT 时从下班时间起算，每一分钟都算
+  if(rule==='OFF'&&!sat){o.rest=o.worked;o.note='休息日';return o}   // 星期六不走休息日工时，改按下面的星期六 OT
+  let en=null;
+  if(rule!=='OFF'){
+    const m=/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(rule);
+    if(!m){o.note='规则格式错误';return o}
+    const st=+m[1]*60+ +m[2];en=+m[3]*60+ +m[4];
+    if(a-st>s.late_grace_min)o.late=a-st;
+  }
+  if(b==null){if(r.work_date<klDate(Date.now()))o.note='忘记下班打卡';return o}   // 没下班就没有 OT 数字
+  if(en!=null&&b<en)o.early=en-b;
+  if(sat){   // 星期六：OT 从 14:00 起算，不管 Schedule 下班时间，没有起算门槛，每分钟都算
+    const L=H.outOk?(H.outs||[]).find(x=>x.user_id===r.user_id&&x.work_date===r.work_date&&x.kind==='lunch'&&x.back_at):null;
+    let ot=Math.max(0,b-SAT_OT_FROM);
+    if(L)ot-=Math.max(0,klMin(L.back_at)-Math.max(klMin(L.out_at),SAT_OT_FROM));   // 午休拖过 14:00 的部分不算 OT
+    o.ot=Math.max(0,ot);
+    if(!L&&H.outOk)o.note='没按午休';   // 没按午休：照样扣掉 13:00–14:00（OT 本来就从 14:00 起算）
+    return o;
+  }
+  if(b>en&&b-en>s.ot_grace_min){o.ot=b-en}   // 超过门槛才有 OT；有 OT 时从下班时间起算，每一分钟都算
   return o;
 }
 function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
@@ -875,8 +888,8 @@ function outGo(){guard(async()=>{
   const reason=($('outR').value||'').trim();
   if(reason.length<2){$('outS').textContent='请写外出理由';return}
   $('outS').textContent='正在定位…';
-  let pos=null;try{pos=await getPos(10000)}catch(e){}
-  const {error}=await sb.rpc('hr_out_start',{p_reason:reason,p_lat:pos?pos.coords.latitude:null,p_lng:pos?pos.coords.longitude:null,p_accuracy:pos?pos.coords.accuracy:null});
+  let pos;try{pos=await getPos(15000)}catch(e){$('outS').textContent='GPS 无法取得：'+geoMsg(e)+'。外出必须在公司范围内按。';return}
+  const {error}=await sb.rpc('hr_out_start',{p_reason:reason,p_lat:pos.coords.latitude,p_lng:pos.coords.longitude,p_accuracy:pos.coords.accuracy});
   if(error){$('outS').textContent=hrErr(error.message);toast(hrErr(error.message));return}
   closeModal();await loadHR();renderHR();toast('已外出，回来请点「回公司」');
 })}
@@ -927,6 +940,10 @@ function camShot(){guard(async()=>{
   }
   if(error){$('camS').textContent=hrErr(error.message);toast(hrErr(error.message));return}
   closeModal();await loadHR();renderHR();toast(camType==='in'?'上班打卡成功':(camType==='out'||camType==='outend')?'下班打卡成功':'已回来上班');
+  if((camType==='out'||camType==='outend')&&H.today&&H.today.clock_out&&isSat(H.today.work_date)){   // 星期六：下班成功后才显示加班总数
+    const c=calc(H.today);
+    openModal('<h3>下班打卡成功</h3><p style="font-size:22px;font-weight:800;margin:10px 0">今天加班 '+(c.ot?hm(c.ot):'0 分钟')+'</p><button class="btn full" onclick="closeModal()">好</button>');
+  }
 })}
 async function selfie(p){const {data,error}=await sb.storage.from('clock-selfies').createSignedUrl(p,300);if(error){toast('无法读取照片');return}openModal('<img src="'+esc(data.signedUrl)+'" style="width:100%;border-radius:10px;margin-bottom:8px"><button class="btn full" onclick="closeModal()">关闭</button>')}
 /* ----- Admin：出勤记录 ----- */
@@ -937,7 +954,7 @@ function tabRec(){
     return '<tr><td>'+r.work_date+'</td><td>'+esc(nameOf(r.user_id))+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+esc(noteOf(r,c))+'</td><td>'+outCell(r)+'</td><td>'+(r.in_distance_m!=null?Math.round(r.in_distance_m)+'m ':'')+mapLink(r.in_lat,r.in_lng)+'</td><td>'+(hasPic(r.in_selfie)?'<a href="#" onclick="selfie(\''+jsAttr(r.in_selfie)+'\');return false">上班</a> ':'')+(hasPic(r.out_selfie)?'<a href="#" onclick="selfie(\''+jsAttr(r.out_selfie)+'\');return false">下班</a>':'')+'</td></tr>'}).join('');
   const sr=Object.keys(S).map(id=>{const u=S[id];return '<tr><td>'+esc(nameOf(id))+'</td><td>'+u.d+'</td><td>'+u.n+' 次 / '+hm(u.lm)+'</td><td>'+hm(u.ot)+'</td><td>'+hm(u.rest)+'</td><td>'+u.miss+'</td></tr>'}).join('');
   return '<div class="card"><div class="row between">'+monthBar()+'<select style="width:auto;margin:0" onchange="fEmp=this.value;renderHR()"><option value="">全部员工</option>'+emps.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===fEmp?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></div></div>'+
-   '<div class="card"><h3>月度汇总</h3><div class="table"><table><tr><th>员工</th><th>出勤天数</th><th>迟到</th><th>OT</th><th>休息日工时</th><th>忘记下班</th></tr>'+(sr||'<tr><td colspan="6" class="muted">本月没有记录</td></tr>')+'</table></div><p class="muted">OT、迟到按「设置」里的当前规则计算；休息日工时单独列出，未计入 OT。</p></div>'+
+   '<div class="card"><h3>月度汇总</h3><div class="table"><table><tr><th>员工</th><th>出勤天数</th><th>迟到</th><th>OT</th><th>休息日工时</th><th>忘记下班</th></tr>'+(sr||'<tr><td colspan="6" class="muted">本月没有记录</td></tr>')+'</table></div><p class="muted">OT、迟到按「设置」里的当前规则计算；休息日工时单独列出，未计入 OT。星期六不看 Schedule，OT 从 14:00 起算（午休拖过 14:00 的时间不算），没有起算门槛，也不算休息日工时。</p></div>'+
    '<div class="card"><div class="row between"><h3 style="margin:0">明细</h3><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>外出</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="12" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
 }
 const noteOf=(r,c)=>[c.note,r.auto_out&&r.clock_out?'午休自动下班，未回来上班':'',r.out_reason?'提早下班：'+r.out_reason:''].filter(Boolean).join('；');
@@ -1067,7 +1084,7 @@ async function schDel(id){if(!confirm('确定删除？使用它的员工会变�
 function tabSet(){
   const s=H.settings;
   const rows=H.locations.map(l=>'<tr><td>'+esc(l.name)+'</td><td>'+gpsText(l.lat,l.lng)+'</td><td><input type="number" min="10" style="width:72px;margin:0;padding:6px" value="'+l.radius_m+'" onchange="lcSet(\''+esc(l.id)+'\',{radius_m:Math.max(10,parseInt(this.value,10)||150)})">m</td><td><input type="checkbox" style="width:auto;margin:0" '+(l.active?'checked':'')+' onchange="lcSet(\''+esc(l.id)+'\',{active:this.checked})"></td><td><button class="btn danger" style="padding:6px 10px" onclick="lcDel(\''+esc(l.id)+'\')">删除</button></td></tr>').join('');
-  return '<div class="card"><h3>OT 与迟到设置</h3><label>OT 起算门槛（分钟）：下班后超过这个分钟数才有 OT；有 OT 时从下班时间开始算，精确到每一分钟</label><input id="st_g" type="number" min="0" value="'+s.ot_grace_min+'"><label>迟到宽限（分钟）</label><input id="st_l" type="number" min="0" value="'+s.late_grace_min+'"><label>提早下班免写理由的宽限（分钟）：比下班时间早不超过这个分钟数，不用写理由</label><input id="st_e" type="number" min="0" value="'+(s.early_grace_min==null?2:s.early_grace_min)+'"><label><input type="checkbox" id="st_f" style="width:auto;margin:0 6px 0 0" '+(s.enforce_geofence?'checked':'')+'>强制 GPS 围栏（范围外不能打卡）</label><button class="btn full" onclick="setSave()">保存设置</button></div>'+
+  return '<div class="card"><h3>OT 与迟到设置</h3><label>OT 起算门槛（分钟，星期六不适用）：下班后超过这个分钟数才有 OT；有 OT 时从下班时间开始算，精确到每一分钟</label><input id="st_g" type="number" min="0" value="'+s.ot_grace_min+'"><label>迟到宽限（分钟）</label><input id="st_l" type="number" min="0" value="'+s.late_grace_min+'"><label>提早下班免写理由的宽限（分钟）：比下班时间早不超过这个分钟数，不用写理由</label><input id="st_e" type="number" min="0" value="'+(s.early_grace_min==null?2:s.early_grace_min)+'"><label><input type="checkbox" id="st_f" style="width:auto;margin:0 6px 0 0" '+(s.enforce_geofence?'checked':'')+'>强制 GPS 围栏（范围外不能打卡）</label><button class="btn full" onclick="setSave()">保存设置</button></div>'+
    '<div class="card"><h3>打卡地点</h3><div class="table"><table><tr><th>名称</th><th>坐标</th><th>半径</th><th>启用</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有地点，目前不检查 GPS 围栏</td></tr>')+'</table></div><label>名称</label><input id="lc_n" placeholder="AKAIDO Office"><div class="row"><div style="flex:1"><label>纬度</label><input id="lc_a" inputmode="decimal"></div><div style="flex:1"><label>经度</label><input id="lc_o" inputmode="decimal"></div></div><label>半径（米，建议 100–200）</label><input id="lc_r" type="number" value="150"><div class="row"><button class="btn secondary" onclick="lcHere()">📍 用我现在的位置</button><button class="btn" onclick="lcAdd()">新增地点</button></div><p class="muted">人站在公司里点「用我现在的位置」最准确。</p></div>';
 }
 async function setSave(){await guard(async()=>{
