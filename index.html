@@ -778,6 +778,7 @@ function calc(r){
   }
   if(b==null){if(r.work_date<klDate(Date.now()))o.note='忘记下班打卡';return o}   // 没下班就没有 OT 数字
   if(en!=null&&b<en)o.early=en-b;
+  if(lvHalves(r.user_id,r.work_date).pm)return o;   // 请了下午假：留到下午的时间不算 OT
   if(sat){   // 星期六：OT 从 14:00 起算，不管 Schedule 下班时间，没有起算门槛，每分钟都算
     const L=H.outOk?(H.outs||[]).find(x=>x.user_id===r.user_id&&x.work_date===r.work_date&&x.kind==='lunch'&&x.back_at):null;
     let ot=Math.max(0,b-SAT_OT_FROM);
@@ -835,7 +836,7 @@ function renderHR(){
 }
 function tabMine(){
   const t=klDate(Date.now()),s=H.schedules.find(x=>x.id===me.schedule_id),rc=H.today;
-  let h='<div class="card"><div class="muted">'+t+' · 马来西亚时间</div><div id="hrNow" style="font-size:38px;font-weight:800">'+klHM(Date.now())+'</div><p class="muted">今日规则：'+(s?esc(s.name)+' · '+esc(ruleOf(s,t)):'未设置 Schedule，请联系管理员')+'<br>上班 '+(rc?klHM(rc.clock_in):'-')+' · 下班 '+(rc&&rc.clock_out?klHM(rc.clock_out):'-')+'</p>';
+  let h='<div class="card"><div class="muted">'+t+' · 马来西亚时间</div><div id="hrNow" style="font-size:38px;font-weight:800">'+klHM(Date.now())+'</div><p class="muted">今日规则：'+(s?esc(s.name)+' · '+esc(todayRule(s,t)):'未设置 Schedule，请联系管理员')+'<br>上班 '+(rc?klHM(rc.clock_in):'-')+' · 下班 '+(rc&&rc.clock_out?klHM(rc.clock_out):'-')+'</p>';
   if(me.track_attendance===false)h+='<div class="muted">此账号不需要考勤打卡</div>';
   else if(me.devState==='pending'||me.devState==='revoked'){h+='<div class="banner">📱 '+(me.devState==='pending'?'此手机还未获批准，暂时不能打卡。请联系管理员，批准后点「重新检查」。':'此手机已被取消绑定，请联系管理员。')+'</div><button class="btn secondary" onclick="recheckDev()">重新检查</button>'}
   else{
@@ -855,7 +856,8 @@ function tabMine(){
   return h+leaveCard()+monthCard(me.id);
 }
 function monthBar(){return '<input type="month" style="width:auto;margin:0" value="'+hrMonth+'" onchange="setMonth(this.value)">'}
-async function setMonth(v){if(!v)return;hrMonth=v;await guard(async()=>{await loadHR();renderHR()})}
+async function setMonth(v){if(!v)return;hrMonth=v;const td=klDate(Date.now());recDay=v===td.slice(0,7)?td:v+'-01';await guard(async()=>{await loadHR();renderHR()})}
+async function setRecDay(v){if(!v)return;recDay=v;if(v.slice(0,7)!==hrMonth){hrMonth=v.slice(0,7);await guard(async()=>{await loadHR();renderHR()})}else renderHR()}   // 选到别的月份时，自动读取那个月的数据
 function monthCard(uid){
   const rs=H.records.filter(r=>r.user_id===uid&&r.work_date.startsWith(hrMonth)),T={late:0,early:0,ot:0,rest:0};
   const rows=rs.map(r=>{const c=calc(r);for(const k in T)T[k]+=c[k];return '<tr><td>'+r.work_date+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+outCell(r)+'</td><td>'+esc(noteOf(r,c))+'</td></tr>'}).join('');
@@ -947,17 +949,21 @@ function camShot(){guard(async()=>{
 })}
 async function selfie(p){const {data,error}=await sb.storage.from('clock-selfies').createSignedUrl(p,300);if(error){toast('无法读取照片');return}openModal('<img src="'+esc(data.signedUrl)+'" style="width:100%;border-radius:10px;margin-bottom:8px"><button class="btn full" onclick="closeModal()">关闭</button>')}
 /* ----- Admin：出勤记录 ----- */
+let recDay=klDate(Date.now());   // 出勤记录明细：只显示这一天（默认今天）
 function tabRec(){
   const emps=D.profiles.filter(p=>p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
   const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(!fEmp||r.user_id===fEmp)),S={};
-  const rows=rs.map(r=>{const c=calc(r),u=S[r.user_id]=S[r.user_id]||{d:0,n:0,lm:0,ot:0,rest:0,miss:0};u.d++;if(c.late){u.n++;u.lm+=c.late}u.ot+=c.ot;u.rest+=c.rest;if(c.note==='忘记下班打卡')u.miss++;
+  rs.forEach(r=>{const c=calc(r),u=S[r.user_id]=S[r.user_id]||{d:0,n:0,lm:0,ot:0,rest:0,miss:0};u.d++;if(c.late){u.n++;u.lm+=c.late}u.ot+=c.ot;u.rest+=c.rest;if(c.note==='忘记下班打卡')u.miss++});
+  const today=klDate(Date.now());
+  if(!recDay.startsWith(hrMonth))recDay=hrMonth===today.slice(0,7)?today:hrMonth+'-01';
+  const rows=rs.filter(r=>r.work_date===recDay).map(r=>{const c=calc(r);
     return '<tr><td>'+r.work_date+'</td><td>'+esc(nameOf(r.user_id))+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+esc(noteOf(r,c))+'</td><td>'+outCell(r)+'</td><td>'+(r.in_distance_m!=null?Math.round(r.in_distance_m)+'m ':'')+mapLink(r.in_lat,r.in_lng)+'</td><td>'+(hasPic(r.in_selfie)?'<a href="#" onclick="selfie(\''+jsAttr(r.in_selfie)+'\');return false">上班</a> ':'')+(hasPic(r.out_selfie)?'<a href="#" onclick="selfie(\''+jsAttr(r.out_selfie)+'\');return false">下班</a>':'')+'</td></tr>'}).join('');
   const sr=Object.keys(S).map(id=>{const u=S[id];return '<tr><td>'+esc(nameOf(id))+'</td><td>'+u.d+'</td><td>'+u.n+' 次 / '+hm(u.lm)+'</td><td>'+hm(u.ot)+'</td><td>'+hm(u.rest)+'</td><td>'+u.miss+'</td></tr>'}).join('');
   return '<div class="card"><div class="row between">'+monthBar()+'<select style="width:auto;margin:0" onchange="fEmp=this.value;renderHR()"><option value="">全部员工</option>'+emps.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===fEmp?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></div></div>'+
    '<div class="card"><h3>月度汇总</h3><div class="table"><table><tr><th>员工</th><th>出勤天数</th><th>迟到</th><th>OT</th><th>休息日工时</th><th>忘记下班</th></tr>'+(sr||'<tr><td colspan="6" class="muted">本月没有记录</td></tr>')+'</table></div><p class="muted">OT、迟到按「设置」里的当前规则计算；休息日工时单独列出，未计入 OT。星期六不看 Schedule，OT 从 14:00 起算（午休拖过 14:00 的时间不算），没有起算门槛，也不算休息日工时。</p></div>'+
-   '<div class="card"><div class="row between"><h3 style="margin:0">明细</h3><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>外出</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="12" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
+   '<div class="card"><div class="row between"><h3 style="margin:0">明细'+(recDay===today?'（今天）':'')+'</h3><input id="recDay" type="date" style="width:auto;margin:0" max="'+today+'" value="'+recDay+'" onchange="setRecDay(this.value)"></div><p class="muted" style="margin:6px 0">只显示这一天的记录，想看别的日期请改上面的日期。</p><div class="row" style="margin:0 0 8px"><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>外出</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="12" class="muted">这一天没有记录</td></tr>')+'</table></div></div>';
 }
-const noteOf=(r,c)=>[c.note,r.auto_out&&r.clock_out?'午休自动下班，未回来上班':'',r.out_reason?'提早下班：'+r.out_reason:''].filter(Boolean).join('；');
+const noteOf=(r,c)=>[c.note,lvDay(r.user_id,r.work_date),r.auto_out&&r.clock_out?'午休自动下班，未回来上班':'',r.out_reason?'提早下班：'+r.out_reason:''].filter(Boolean).join('；');
 const earlyBy=rc=>{if(!rc||!rc.sched_rule)return 0;const m=/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(rc.sched_rule);if(!m)return 0;const g=H.settings.early_grace_min;return +m[3]*60+ +m[4]-klMin(Date.now())-(g==null?2:g)};
 const canDl=()=>isAdmin()||me.can_att_download===true;
 function exportRec(mine){
@@ -993,19 +999,25 @@ async function delStaff(id,name){
 let LV=[];
 const dmy=d=>{const a=String(d).split('-');return +a[2]+'/'+ +a[1]+'/'+a[0]};
 async function loadLv(){try{const r=await sb.from('hr_leaves').select('*').order('start_date',{ascending:false}).limit(300);LV=r.error?[]:(r.data||[])}catch(e){LV=[]}}
-const leaveErr=m=>{m=String(m||'');return /LEAVE_OVERLAP/.test(m)?'这段日期已经有请假记录':/LEAVE_NO_BALANCE/.test(m)?'有薪假期余额不足':/SICK_NO_BALANCE/.test(m)?'病假次数已用完，请改选无薪假期':/LEAVE_EXPIRED/.test(m)?'这个假期已过到期日，这段日期不能使用，请改选无薪假期':/LEAVE_BAD_DATES/.test(m)?'日期不正确':/LEAVE_TOO_LONG/.test(m)?'一次最多请 60 天':/LEAVE_NO_WORKDAY/.test(m)?'这段日期都是休息日，不需要请假':/LEAVE_STARTED/.test(m)?'已经开始的假期不能取消，请联系管理员':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能请假':'请假失败：'+m};
+const leaveErr=m=>{m=String(m||'');return /p_half/.test(m)?'半天假功能还没启用，请联系管理员':/LEAVE_HALF_SHORT_DAY/.test(m)?'这天本来就是半天班，请选「全天」':/LEAVE_OVERLAP/.test(m)?'这个日期或时段已经有请假记录':/LEAVE_NO_BALANCE/.test(m)?'有薪假期余额不足':/SICK_NO_BALANCE/.test(m)?'病假次数已用完，请改选无薪假期':/LEAVE_EXPIRED/.test(m)?'这个假期已过到期日，这段日期不能使用，请改选无薪假期':/LEAVE_BAD_DATES/.test(m)?'日期不正确':/LEAVE_TOO_LONG/.test(m)?'一次最多请 60 天':/LEAVE_NO_WORKDAY/.test(m)?'这段日期都是休息日，不需要请假':/LEAVE_STARTED/.test(m)?'已经开始的假期不能取消，请联系管理员':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能请假':'请假失败：'+m};
 const lvKind=l=>({paid:'有薪 · 不扣薪',sick:'病假 · 不扣薪',unpaid:'无薪 · 扣薪'}[l.kind]||l.kind);
+const lvHalf=l=>l.half==='am'?'上午':l.half==='pm'?'下午':'';
+const lvHalves=(uid,d)=>{const h={am:false,pm:false};(LV||[]).forEach(l=>{if(l.user_id===uid&&l.status==='approved'&&l.half&&l.start_date===d)h[l.half]=true});return h};
+const lvDay=(uid,d)=>{const h=lvHalves(uid,d);return (h.am?'上午请假':'')+(h.am&&h.pm?'、':'')+(h.pm?'下午请假':'')};
+const todayRule=(s,t)=>{const r=ruleOf(s,t),hv=lvHalves(me.id,t);if(!r||!/^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(r)||(!hv.am&&!hv.pm))return r;if(hv.am&&hv.pm)return '请假（全天）';const ls=String(H.settings.lunch_start||'13:00').slice(0,5),le=String(H.settings.lunch_end||'14:00').slice(0,5);return (hv.am?le+'-'+r.split('-')[1]:r.split('-')[0]+'-'+ls)+'（'+(hv.am?'上午':'下午')+'请假）'};
 const lvStat=l=>({approved:'已登记',rejected:'已被驳回',cancelled:'已取消'}[l.status]||l.status);
 function leaveCard(){
   if(me.track_attendance===false)return '';
-  const td=klDate(Date.now()),rows=LV.filter(l=>l.user_id===me.id).slice(0,8).map(l=>'<div class="item"><b>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</b> · '+l.days+' 天 · '+lvKind(l)+' · '+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+(l.kind==='sick'?(l.mc_path?' · <a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">MC</a>':' · <a href="#" onclick="leaveMcForm(\''+esc(l.id)+'\');return false">补传 MC</a>'):'')+' · '+lvStat(l)+(l.status==='approved'&&l.start_date>td?' <a href="#" onclick="leaveCancel(\''+esc(l.id)+'\');return false">取消</a>':'')+'</div>').join('');
+  const td=klDate(Date.now()),rows=LV.filter(l=>l.user_id===me.id).slice(0,8).map(l=>'<div class="item"><b>'+dmy(l.start_date)+(l.half?'（'+lvHalf(l)+'）':'')+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</b> · '+l.days+' 天 · '+lvKind(l)+' · '+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+(l.kind==='sick'?(l.mc_path?' · <a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">MC</a>':' · <a href="#" onclick="leaveMcForm(\''+esc(l.id)+'\');return false">补传 MC</a>'):'')+' · '+lvStat(l)+(l.status==='approved'&&l.start_date>td?' <a href="#" onclick="leaveCancel(\''+esc(l.id)+'\');return false">取消</a>':'')+'</div>').join('');
   return '<div class="card"><div class="row between"><h3 style="margin:0">🌴 请假 On Leave</h3><button class="btn" onclick="leaveForm()">＋ 请假</button></div><p class="muted" style="margin:8px 0 0">有薪假期余额：<b>'+(me.leave_balance||0)+' 天</b> · 病假余额：<b>'+(me.sick_balance==null?0:me.sick_balance)+' 次</b>'+(me.leave_expiry?' · 到期日 '+dmy(me.leave_expiry):'')+'</p>'+(rows||'<p class="muted">还没有请假记录</p>')+'</div>';
 }
 function leaveForm(){
   const t=klDate(Date.now()),ex=me.leave_expiry?'，到期 '+dmy(me.leave_expiry):'';
-  openModal('<h3>请假 On Leave</h3><label>类型</label><select id="lv_k" onchange="lvKindChg()"><option value="paid">有薪假期（余额 '+(me.leave_balance||0)+' 天'+ex+'）</option><option value="sick">病假（余额 '+(me.sick_balance==null?0:me.sick_balance)+' 次'+ex+'）</option><option value="unpaid">无薪假期</option></select><label>从</label><input id="lv_s" type="date" value="'+t+'"><label>到</label><input id="lv_e" type="date" value="'+t+'"><div id="lv_rw"><label>原因</label><select id="lv_r">'+['旅行','婚礼','白事','其它'].map(x=>'<option>'+x+'</option>').join('')+'</select></div><div id="lv_mw" class="hidden"><label>医生证明 MC（照片或 PDF，可以稍后补传）</label><input id="lv_m" type="file" accept="image/*,application/pdf"></div><label>备注（选填；原因选「其它」请写清楚）</label><input id="lv_n"><div class="row"><button class="btn" onclick="leaveSubmit()">提交</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+  openModal('<h3>请假 On Leave</h3><label>类型</label><select id="lv_k" onchange="lvKindChg()"><option value="paid">有薪假期（余额 '+(me.leave_balance||0)+' 天'+ex+'）</option><option value="sick">病假（余额 '+(me.sick_balance==null?0:me.sick_balance)+' 次'+ex+'）</option><option value="unpaid">无薪假期</option></select><label>时长</label><select id="lv_h" onchange="lvHalfChg()"><option value="">全天（可选多天）</option><option value="am">上午（半天，扣 0.5 天）</option><option value="pm">下午（半天，扣 0.5 天）</option></select><label id="lv_sl">从</label><input id="lv_s" type="date" value="'+t+'" onchange="lvSync()"><div id="lv_ew"><label>到</label><input id="lv_e" type="date" value="'+t+'"></div><p id="lv_hn" class="muted hidden" style="margin:0 0 8px">病假请半天，也扣 1 次病假。</p><div id="lv_rw"><label>原因</label><select id="lv_r">'+['旅行','婚礼','白事','其它'].map(x=>'<option>'+x+'</option>').join('')+'</select></div><div id="lv_mw" class="hidden"><label>医生证明 MC（照片或 PDF，可以稍后补传）</label><input id="lv_m" type="file" accept="image/*,application/pdf"></div><label>备注（选填；原因选「其它」请写清楚）</label><input id="lv_n"><div class="row"><button class="btn" onclick="leaveSubmit()">提交</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
 }
-const lvKindChg=()=>{const k=$('lv_k').value;$('lv_rw').classList.toggle('hidden',k==='sick');$('lv_mw').classList.toggle('hidden',k!=='sick')};
+const lvKindChg=()=>{const k=$('lv_k').value;$('lv_rw').classList.toggle('hidden',k==='sick');$('lv_mw').classList.toggle('hidden',k!=='sick');lvHalfChg()};
+const lvHalfChg=()=>{const h=$('lv_h').value;$('lv_ew').classList.toggle('hidden',!!h);$('lv_sl').textContent=h?'日期':'从';if(h)$('lv_e').value=$('lv_s').value;$('lv_hn').classList.toggle('hidden',!(h&&$('lv_k').value==='sick'))};
+const lvSync=()=>{if($('lv_h').value)$('lv_e').value=$('lv_s').value};   // 半天假只有一天
 async function mcUpload(file){
   if(!file)return null;
   if(!/^(image\/|application\/pdf)/.test(file.type||''))throw new Error('MC 只能是照片或 PDF');
@@ -1014,12 +1026,13 @@ async function mcUpload(file){
   const up=await sb.storage.from('leave-mc').upload(path,file,{contentType:file.type});if(up.error)throw up.error;return path;
 }
 async function leaveSubmit(){
-  const k=$('lv_k').value,a=$('lv_s').value,b=$('lv_e').value,r=k==='sick'?'病假':$('lv_r').value,n=$('lv_n').value.trim();
+  const k=$('lv_k').value,h=$('lv_h').value,a=$('lv_s').value,b=h?a:$('lv_e').value,r=k==='sick'?'病假':$('lv_r').value,n=$('lv_n').value.trim();
   if(!a||!b||b<a){toast('请选择正确的日期');return}
   if(r==='其它'&&n.length<2){toast('原因选「其它」，请在备注写清楚');return}
   await guard(async()=>{
     const mc=k==='sick'?await mcUpload($('lv_m').files[0]):null;
-    const {error}=await sb.rpc('hr_leave_apply',{p_kind:k,p_start:a,p_end:b,p_reason:r,p_note:n||null,p_mc:mc});
+    const args={p_kind:k,p_start:a,p_end:b,p_reason:r,p_note:n||null,p_mc:mc};if(h)args.p_half=h;   // 只有请半天才带这个参数，全天请假完全不受影响
+    const {error}=await sb.rpc('hr_leave_apply',args);
     if(error){toast(leaveErr(error.message));return}
     closeModal();await loadAll();renderHR();toast('请假已登记');
   });
@@ -1036,7 +1049,7 @@ function leaveCsv(scope){
   const y=hrMonth.slice(0,4),kn={paid:'有薪假期',sick:'病假',unpaid:'无薪假期'},sn={approved:'已登记',rejected:'已驳回',cancelled:'已取消'};
   const list=LV.filter(l=>scope==='year'?(l.start_date.slice(0,4)===y||l.end_date.slice(0,4)===y):(l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth)).slice().sort((a,b)=>a.start_date.localeCompare(b.start_date));
   if(!list.length){toast('这段时间没有请假记录');return}
-  dlCSV('AKAIDO-请假报告-'+(scope==='year'?y:hrMonth)+'.csv',['员工','类型','开始日期','结束日期','天数','原因','备注','状态','MC','是否扣薪','登记时间'],list.map(l=>[nameOf(l.user_id),kn[l.kind]||l.kind,l.start_date,l.end_date,l.days,l.reason,l.note||'',sn[l.status]||l.status,l.kind==='sick'?(l.mc_path?'已上传':'未上传'):'',l.kind==='unpaid'?'扣薪':'不扣薪',fmt(l.created_at)]));
+  dlCSV('AKAIDO-请假报告-'+(scope==='year'?y:hrMonth)+'.csv',['员工','类型','开始日期','结束日期','时段','天数','时段','原因','备注','状态','MC','是否扣薪','登记时间'],list.map(l=>[nameOf(l.user_id),kn[l.kind]||l.kind,l.start_date,l.end_date,lvHalf(l)||'全天',l.days,lvHalf(l)||'全天',l.reason,l.note||'',sn[l.status]||l.status,l.kind==='sick'?(l.mc_path?'已上传':'未上传'):'',l.kind==='unpaid'?'扣薪':'不扣薪',fmt(l.created_at)]));
 }
 function leaveBalCsv(){
   const y=hrMonth.slice(0,4),emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
@@ -1049,7 +1062,7 @@ function tabLeave(){
   const emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
   const inp=(p,k,t)=>'<input type="'+t+'" '+(t==='number'?'min="0" step="'+(k==='sick_balance'?'1':'0.5')+'"':'')+' style="margin:0;padding:6px;width:'+(t==='date'?'150px':'80px')+'" value="'+esc(p[k]==null?'':p[k])+'" onchange="setProf(\''+esc(p.id)+'\',{'+k+':'+(t==='number'?'Math.max(0,'+(k==='sick_balance'?'Math.round(parseFloat(this.value)||0)':'parseFloat(this.value)||0')+')':'this.value||null')+'})">';
   const r1=emps.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+inp(p,'leave_balance','number')+'</td><td>'+inp(p,'sick_balance','number')+'</td><td>'+inp(p,'leave_expiry','date')+'</td></tr>').join('');
-  const r2=LV.filter(l=>l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth).map(l=>'<tr><td>'+esc(nameOf(l.user_id))+'</td><td>'+dmy(l.start_date)+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</td><td>'+l.days+'</td><td>'+lvKind(l)+'</td><td>'+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+'</td><td>'+(l.kind==='sick'?(l.mc_path?'<a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">查看</a>':'<span class="red">未上传</span>'):'')+'</td><td>'+lvStat(l)+'</td><td>'+(l.status==='approved'?'<button class="btn danger" style="padding:6px 10px" onclick="leaveCancel(\''+esc(l.id)+'\')">驳回</button>':'')+'</td></tr>').join('');
+  const r2=LV.filter(l=>l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth).map(l=>'<tr><td>'+esc(nameOf(l.user_id))+'</td><td>'+dmy(l.start_date)+(l.half?'（'+lvHalf(l)+'）':'')+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</td><td>'+l.days+'</td><td>'+lvKind(l)+'</td><td>'+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+'</td><td>'+(l.kind==='sick'?(l.mc_path?'<a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">查看</a>':'<span class="red">未上传</span>'):'')+'</td><td>'+lvStat(l)+'</td><td>'+(l.status==='approved'?'<button class="btn danger" style="padding:6px 10px" onclick="leaveCancel(\''+esc(l.id)+'\')">驳回</button>':'')+'</td></tr>').join('');
   return '<div class="card"><h3>员工有薪假期设置</h3><div class="table"><table><tr><th>员工</th><th>有薪余额（天）</th><th>病假余额（次）</th><th>到期日（共用）</th></tr>'+(r1||'<tr><td colspan="4" class="muted">没有员工</td></tr>')+'</table></div><p class="muted">每个员工的天数、次数和到期日可以不一样，改完自动保存。有薪假期和病假共用同一个到期日；病假按次数计，每提交一次用掉 1 次。</p></div>'+
    '<div class="card"><div class="row between"><h3 style="margin:0">请假记录</h3>'+monthBar()+'</div><div class="row" style="margin:8px 0"><button class="btn secondary" onclick="leaveCsv(\'month\')">⬇ 下载本月报告</button><button class="btn secondary" onclick="leaveCsv(\'year\')">⬇ 下载全年报告</button><button class="btn secondary" onclick="leaveBalCsv()">⬇ 下载余额汇总</button></div><div class="table"><table><tr><th>员工</th><th>日期</th><th>天数</th><th>类型</th><th>原因</th><th>MC</th><th>状态</th><th></th></tr>'+(r2||'<tr><td colspan="8" class="muted">这个月没有请假记录</td></tr>')+'</table></div></div>';
 }
