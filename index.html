@@ -35,6 +35,20 @@ label{display:block;font-size:12px;font-weight:700;color:#667085;margin-bottom:3
 .full{width:100%}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .between{justify-content:space-between}
+.fgrp{border:1px solid #e5e7eb;border-radius:11px;margin-top:8px;overflow:hidden}
+.fgrp summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f8fafc;font-weight:800}
+.fgrp summary::-webkit-details-marker{display:none}
+.fgrp summary::before{content:'▸';color:#667085;transition:transform .15s}
+.fgrp[open] summary::before{transform:rotate(90deg)}
+.fgrp .fname{flex:1}
+.fgrp .fcnt{background:#123b7a;color:#fff;border-radius:99px;padding:2px 9px;font-size:12px}
+.fgrp .fod{background:#fee4e2;color:#b42318;border-radius:99px;padding:2px 9px;font-size:12px}
+.frow{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid #eef0f3}
+.frow .fmain{flex:1;min-width:0;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow small{white-space:nowrap}
+.fbtn{padding:6px 12px!important;font-size:13px!important}
+.ftools{display:flex;justify-content:flex-end;margin-top:6px}
+.ftools a{font-size:13px;color:#123b7a;cursor:pointer}
 .item{border:1px solid #e5e7eb;border-radius:11px;padding:11px;margin-top:8px}
 .muted{color:#667085;font-size:13px}
 .red{color:#b42318;font-weight:700}
@@ -262,11 +276,33 @@ function renderDashboard(){
   if(!me.pwdChanged)h+='<div class="banner"><b>⚠️ 请先修改默认密码。</b>当前账号仍在使用初始密码，任何知道账号名的人都可能登录。请在页面最下方的「修改我的密码」修改。</div>';
   h+='<div class="grid">'+stats+'</div><p class="muted" style="margin:-4px 0 12px">潜在订单 = 各客户最近一次拜访所填金额之和。</p>';
   if(admin)h+=salesTable();
-  h+='<div class="card"><h3>📅 待跟进客户</h3>'+(due.length?due.slice(0,15).map(c=>
-    '<div class="item row between"><div><b>'+esc(c.name)+'</b> <span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+'</span><br><small class="red">跟进日期 '+esc(c.follow_up)+'</small>'+(admin?' <small class="muted">· '+esc(nameOf(c.owner_id))+'</small>':'')+'</div>'+
-    '<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button></div>').join(''):'<div class="muted">目前没有到期的跟进</div>')+'</div>';
+  h+='<div class="card"><h3>📅 待跟进客户 <span class="muted">（共 '+due.length+' 家）</span></h3>'+dueGrouped(due,admin)+'</div>';
   h+='<div class="card"><h3>🔒 修改我的密码</h3><input id="pw1" type="password" placeholder="新密码（至少 8 位）" autocomplete="new-password"><input id="pw2" type="password" placeholder="再输入一次新密码" autocomplete="new-password"><button class="btn" onclick="changePassword()">保存新密码</button></div>';
   $('dashboard').innerHTML=h;
+}
+function dueGrouped(due,admin){
+  if(!due.length)return '<div class="muted">目前没有到期的跟进</div>';
+  const today=ymd(),map=new Map();
+  due.forEach(c=>{const k=admin?(c.owner_id||'-'):c.follow_up;if(!map.has(k))map.set(k,[]);map.get(k).push(c)});
+  let groups=[...map.entries()].map(([k,list])=>({k,list,od:list.filter(c=>c.follow_up<today).length}));
+  // admin：逾期最多的 Sales 排前面；员工：日期由旧到新
+  groups.sort(admin?((a,b)=>b.od-a.od||b.list.length-a.list.length):((a,b)=>a.k.localeCompare(b.k)));
+  const openAll=groups.length===1;
+  const html=groups.map(g=>{
+    let label,badge='';
+    if(admin){label=esc(nameOf(g.k)||'未分配');if(g.od)badge='<span class="fod">逾期 '+g.od+'</span>'}
+    else{label=esc(g.k)+(g.k<today?'（逾期）':'（今天）')}
+    const rows=g.list.map(c=>'<div class="frow"><div class="fmain">'+esc(c.name)+' <span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+'</span></div>'+
+      (admin?'<small class="'+(c.follow_up<today?'red':'muted')+'">'+esc(c.follow_up.slice(5))+'</small>':'')+
+      '<button class="btn fbtn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button></div>').join('');
+    return '<details class="fgrp"'+(openAll?' open':'')+'><summary><span class="fname">'+label+'</span>'+badge+'<span class="fcnt">'+g.list.length+'</span></summary>'+rows+'</details>';
+  }).join('');
+  const tools=groups.length>1?'<div class="ftools"><a onclick="toggleDue(this)">全部展开</a></div>':'';
+  return tools+'<div class="fwrap">'+html+'</div>';
+}
+function toggleDue(a){
+  const ds=a.closest('.card').querySelectorAll('details.fgrp'),open=a.textContent==='全部展开';
+  ds.forEach(d=>d.open=open);a.textContent=open?'全部收起':'全部展开';
 }
 function salesTable(){
   const rows=salesList().map(u=>{
