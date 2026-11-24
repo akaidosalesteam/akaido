@@ -1,128 +1,1184 @@
-<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>保险柜抽奖</title>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123B7A">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="AKAIDO">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>AKAIDO Sales System V3.0</title>
 <style>
-html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;user-select:none;-webkit-user-select:none}
-#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
-canvas{position:absolute;left:0;top:0}
-.b{position:absolute;color:#fff;background:rgba(255,255,255,.1);border:1px solid #f5c842;font-size:16px;text-align:center;line-height:38px;height:40px;cursor:pointer;box-sizing:border-box}
-.b:active{background:rgba(255,255,255,.3)}
-#ti{position:absolute;left:440px;top:674px;width:400px;height:44px;background:rgba(0,0,0,.6);border:1px solid #f5c842;color:#f5c842;font-size:34px;font-weight:bold;text-align:center;display:none;font-family:inherit;outline:none}
-#vp{position:absolute;left:23px;top:257px;width:300px;padding:14px;background:rgba(10,14,20,.92);border:1px solid #f5c842;color:#fff;display:none;font-size:16px;box-sizing:border-box}
-#vp input{width:100%;margin:6px 0 14px}
-.pn{position:absolute;display:none;background:rgba(0,0,0,.88);border:2px solid #3e54c8;color:#fff;box-sizing:border-box;z-index:5}
-.pn h2{margin:0;text-align:center;color:#f5c842;font-size:28px;line-height:60px}.pn .x{position:absolute;right:14px;top:12px;width:36px;height:36px;font-size:22px;line-height:34px}
-.bd{position:absolute;left:0;right:0;overflow-y:auto;-webkit-overflow-scrolling:touch}.bd::-webkit-scrollbar{width:6px}.bd::-webkit-scrollbar-thumb{background:#3e54c8}
-.pn h3{margin:14px 0 8px;font-size:20px}.gr{position:relative;width:648px;margin:0 auto 20px}
-.it{position:absolute;box-sizing:border-box;border:2px solid;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.it img{max-width:88%;max-height:80%;object-fit:contain}.it span{position:absolute;bottom:1px;font-size:11px;color:#ccd;text-shadow:0 0 3px #000;white-space:nowrap}
-table{border-collapse:collapse;margin:0 auto;font-size:15px}td{padding:6px 5px}table input{background:#111;color:#fff;border:1px solid #556;padding:6px;font-size:15px;font-family:inherit}
-.cb,.tb,.fb{display:inline-block;min-width:30px;height:30px;line-height:30px;text-align:center;border:1px solid #667;margin:0 2px;cursor:pointer;color:#ccd;box-sizing:border-box}.on{background:#3e54c8;color:#fff;border-color:#fff}
-.tb{width:30px;border-radius:50%}.tb.on{outline:2px solid #fff}
-#start{position:absolute;inset:0;background:rgba(0,0,0,.85);color:#f5c842;font-size:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9}
-</style></head><body>
-<div id="stage"><canvas id="c" width="1280" height="720"></canvas>
-<div class="b" id="sb" style="left:20px;top:668px;width:196px"></div>
-<div class="b" id="tb" style="left:1115px;top:14px;width:150px">编辑标题</div>
-<div class="b" id="rb" style="left:1005px;top:14px;width:100px">重置奖池</div>
-<input id="ti" maxlength="16"><div id="vp">音效<input type="range" id="sv" min="0" max="1" step=".05">背景音乐<input type="range" id="bv" min="0" max="1" step=".05"></div>
-<div class="pn" id="pv" style="left:272px;top:40px;width:736px;height:640px"><h2>奖 品 一 览</h2><div class="b x" id="pvx">×</div><div class="bd" id="pvb" style="top:64px;bottom:20px"></div></div>
-<div class="pn" id="ad" style="left:130px;top:20px;width:1100px;height:530px"><h2>奖 品 管 理</h2><div class="b x" id="adx">×</div><div style="text-align:center;font-size:13px;color:#aab;margin-top:-6px">直接改名称/价格 · 点格子数、颜色切换 · 「翻转」横竖互换 · 自动保存</div><div class="bd" id="adb" style="top:76px;bottom:12px"></div></div>
-<div id="start">点击屏幕开始</div></div>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#f4f7fb;color:#172033;-webkit-text-size-adjust:100%}
+h2{margin:6px 0 12px;font-size:20px}h3{margin:0 0 8px;font-size:16px}
+a{color:#123B7A}
+.top{background:#123B7A;color:#fff;padding:12px 0;padding-top:calc(12px + env(safe-area-inset-top,0px));position:sticky;top:0;z-index:20}
+.topin{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 14px}
+.userline{font-size:12px;opacity:.8;margin-top:2px}
+.hbtn{border:1px solid #ffffff55;background:#ffffff1a;color:#fff;border-radius:8px;padding:7px 10px;font-size:12px}
+.container{max-width:1100px;margin:auto;padding:14px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:15px;padding:15px;margin-bottom:12px;box-shadow:0 3px 12px #123b7a0d}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.stat{padding:13px;border-radius:12px;background:#fff;border:1px solid #e3ebf7}
+.stat b{display:block;font-size:22px;color:#123B7A;word-break:break-word}
+.stat span{font-size:12px;color:#667085}
+input,select,textarea{width:100%;padding:11px;border:1px solid #d6dbe5;border-radius:9px;margin-bottom:8px;font:inherit;font-size:16px;background:#fff}
+textarea{min-height:85px}
+label{display:block;font-size:12px;font-weight:700;color:#667085;margin-bottom:3px}
+.btn{border:0;border-radius:9px;padding:11px 14px;background:#123B7A;color:#fff;font-weight:700;font:inherit;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.6}
+.secondary{background:#e8eef8;color:#123B7A}
+.danger{background:#b42318;color:#fff}
+.full{width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.fgrp{border:1px solid #e5e7eb;border-radius:11px;margin-top:8px;overflow:hidden}
+.fgrp summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f8fafc;font-weight:800}
+.fgrp summary::-webkit-details-marker{display:none}
+.fgrp summary::before{content:'▸';color:#667085;transition:transform .15s}
+.fgrp[open] summary::before{transform:rotate(90deg)}
+.fgrp .fname{flex:1}
+.fgrp .fcnt{background:#123b7a;color:#fff;border-radius:99px;padding:2px 9px;font-size:12px}
+.fgrp .fod{background:#fee4e2;color:#b42318;border-radius:99px;padding:2px 9px;font-size:12px}
+.frow{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid #eef0f3}
+.frow .fmain{flex:1;min-width:0;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow small{white-space:nowrap}
+.fbtn{padding:6px 12px!important;font-size:13px!important}
+.ftools{display:flex;justify-content:flex-end;margin-top:6px}
+.ftools a{font-size:13px;color:#123b7a;cursor:pointer}
+.item{border:1px solid #e5e7eb;border-radius:11px;padding:11px;margin-top:8px}
+.muted{color:#667085;font-size:13px}
+.red{color:#b42318;font-weight:700}
+.err{color:#b42318;font-size:13px;margin:8px 0 0}
+.banner{background:#fff4d6;border:1px solid #f0d58a;color:#7a4b00;border-radius:12px;padding:12px;margin-bottom:12px;font-size:14px}
+.badge{display:inline-block;padding:4px 8px;border-radius:99px;font-size:11px;font-weight:800}
+.g-A{background:#e8f7ee;color:#16834a}.g-B{background:#fff4d6;color:#a15c00}.g-C{background:#eee;color:#666}
+.hidden{display:none!important}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ddd;display:flex;z-index:20;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav button{flex:1;border:0;background:#fff;padding:9px 3px;font-size:11px;color:#667085}
+.nav button.on{color:#123B7A;font-weight:800}
+main.container{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.loginbox{width:100%;max-width:420px}
+.logo{font-size:34px;font-weight:900;color:#123B7A}
+.table{width:100%;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #eee;white-space:nowrap}
+td select{margin:0;padding:6px;font-size:13px;width:auto}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#172033;color:#fff;padding:11px 16px;border-radius:10px;font-size:14px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+@media(min-width:700px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1000px){.grid{grid-template-columns:repeat(6,1fr)}}
+</style>
+</head>
+<body>
+
+<div id="login" class="login">
+ <div class="loginbox">
+  <div class="logo">AKAIDO</div>
+  <div class="muted" style="margin:5px 0 18px">SALES MANAGEMENT SYSTEM V3.0 · 云端版</div>
+  <div class="card">
+   <label for="lu">账号 Username</label>
+   <input id="lu" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+   <label for="lp">密码 Password</label>
+   <input id="lp" type="password" autocomplete="current-password">
+   <button id="loginBtn" class="btn full" type="button" onclick="doLogin()">登录 LOGIN</button>
+   <p id="loginMsg" class="err hidden"></p>
+   <p class="muted">账号由管理员创建，不能自行注册。</p>
+  </div>
+ </div>
+</div>
+
+<div id="app" class="hidden">
+ <header class="top">
+  <div class="container topin" style="padding-top:0;padding-bottom:0">
+   <div><b>AKAIDO SYSTEM</b><div id="userline" class="userline"></div></div>
+   <div class="row"><button class="hbtn" type="button" onclick="refresh()">↻ 刷新</button><button class="hbtn" type="button" onclick="logout()">退出</button></div>
+  </div>
+ </header>
+ <main class="container">
+  <section id="dashboard"></section>
+  <section id="checkin" class="hidden"></section>
+  <section id="customers" class="hidden"></section>
+  <section id="visits" class="hidden"></section>
+  <section id="admin" class="hidden"></section>
+  <section id="hr" class="hidden"></section>
+ </main>
+ <nav class="nav">
+  <button data-p="dashboard" onclick="page('dashboard')">📊<br>首页</button>
+  <button data-p="checkin" onclick="page('checkin')">📍<br>外勤</button>
+  <button data-p="customers" onclick="page('customers')">👥<br>客户</button>
+  <button data-p="visits" onclick="page('visits')">📝<br>拜访</button>
+  <button data-p="hr" onclick="page('hr')">🕐<br>考勤</button>
+  <button id="navAdmin" data-p="admin" onclick="page('admin')">⚙️<br>后台</button>
+ </nav>
+</div>
+<div id="toast" class="toast"></div>
+<div id="modal" class="hidden" style="position:fixed;inset:0;background:#000b;z-index:60;overflow:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))"><div id="modalBox" class="card" style="max-width:480px;margin:20px auto"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-const W=1280,H=720,$=id=>document.getElementById(id),cv=$('c'),g=cv.getContext('2d'),stage=$('stage');
-function fit(){const s=Math.min(innerWidth/W,innerHeight/H);stage.style.transform=`scale(${s})`;stage.style.left=(innerWidth-W*s)/2+'px';stage.style.top=(innerHeight-H*s)/2+'px'}
-addEventListener('resize',fit);fit();
-const TIERS={blue:{c:'#377deb',w:50,s:1},purple:{c:'#9b50e1',w:30,s:2},gold:{c:'#f5be28',w:15,s:3.4},red:{c:'#e63232',w:5,s:5}};
-const SCN=[{n:'军绿',p:'images/',fo:[.05331,.10448,.89338,.79449]},{n:'深蓝',p:'images/scene2/',fo:[.05239,.10148,.89636,.79019]}];
-const SND={click:['click_password',.9],decrypt:['decrypting',.5],done:['unlock_done',1],box:['box_open',1],open:['unlock_open',1],rc:['reveal_common',1],rr:['reveal_rare',1],bgm:['bgm',.35]};
-let S=JSON.parse(localStorage.getItem('lk')||'{}');S={sv:.8,bv:.6,title:'保 险 柜 抽 奖',scene:0,...S};
-const save=()=>localStorage.setItem('lk',JSON.stringify(S));
-const IMG={};function img(p){if(!IMG[p]){IMG[p]=new Image();IMG[p].src=p}return IMG[p]}
-const snd={};for(const k in SND){snd[k]=new Audio('sounds/'+SND[k][0]+'.wav');snd[k].preload='auto'}snd.bgm.loop=snd.decrypt.loop=true;
-function play(k){const a=snd[k];if(!a)return;a.volume=Math.min(1,(k=='bgm'?S.bv:S.sv*SND[k][1]));if(k!='bgm'&&k!='decrypt')a.currentTime=0;a.play().catch(()=>{})}
-function stop(k){snd[k].pause();snd[k].currentTime=0}
-function applyVol(){snd.bgm.volume=S.bv;snd.decrypt.volume=Math.min(1,S.sv*.5)}
-let prizes=[],pool=[],opened={},sel=null,st='menu',t0=0,cur=null,prize=null,pz={},blurBg={};
-fetch('prizes.json').then(r=>r.json()).then(d=>{try{const l=JSON.parse(localStorage.getItem('lp')||'null');if(Array.isArray(l)&&l.length)d=l}catch(e){}prizes=d;resetPool()}).catch(()=>{});
-let grpNo=1;const SZ={1:[1,1],2:[1,2],4:[2,2],6:[2,3],9:[3,3]},TN={red:'红',gold:'金',purple:'紫',blue:'蓝'},sz=p=>{const[w,h]=SZ[p.cells]||[2,2];return p.flip?[h,w]:[w,h]};
-const savePr=()=>localStorage.setItem('lp',JSON.stringify(prizes));
-function resetPool(){pool=prizes.slice();grpNo=1;newGroup()}
-function newGroup(){opened={};sel=null;grp=Math.min(24,pool.length)}let grp=0;
-function pick(){const ts=Object.keys(TIERS).filter(t=>pool.some(p=>p.tier==t));const tot=ts.reduce((a,t)=>a+TIERS[t].w,0);let r=Math.random()*tot,t=ts[0];for(const x of ts){if((r-=TIERS[x].w)<0){t=x;break}}
- const l=pool.filter(p=>p.tier==t),p=l[Math.random()*l.length|0];pool.splice(pool.indexOf(p),1);return p}
-function bgFor(){const p=SCN[S.scene].p+'background.png',im=img(p);if(!im.complete||!im.naturalWidth)return null;
- if(!blurBg[p]){const o=document.createElement('canvas');o.width=W;o.height=H;const c=o.getContext('2d');c.filter='blur(8px)';c.drawImage(im,-20,-20,W+40,H+40);c.filter='none';c.fillStyle='rgba(0,0,0,.16)';c.fillRect(0,0,W,H);blurBg[p]=o}return blurBg[p]}
-function geo(im,w,F,mx,my,right){if(!im.complete||!im.naturalWidth)return null;const k=w/(im.naturalWidth*F[1]),aw=im.naturalWidth*k,ah=im.naturalHeight*k,left=right?W-mx-(F[0]+F[1])*aw:mx-F[0]*aw,top=H-(my-F[2]*ah)-ah;return{l:left,t:top,w:aw,h:ah}}
-const hz=(g,F)=>g&&{x:g.l+F[0]*g.w,y:g.t+F[1]*g.h,w:(F[2]-F[0])*g.w,h:(F[3]-F[1])*g.h},inr=(r,x,y)=>r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h;
-const A=()=>geo(img('images/audio_idle.png'),270,[.05012,.8926,.09129],6,30,false),PR=()=>geo(img('images/props_idle.png'),240,[.11659,.76683,.14407],6,4,true);
-const SPK=[.22076,.05758,.45883,.44171],BOX=[.05012,.29494,.94272,.90871],PHIT=[.35506,.16241,.71118,.43353];let mx=0,my=0,pvOpen=false,adOpen=false;
-const cell=i=>[640+((i%6)-2.5)*156,179+(i/6|0)*106];
-function txt(s,x,y,sz,col,al){g.font=`bold ${sz}px "Microsoft YaHei","PingFang SC",sans-serif`;g.fillStyle=col||'#fff';g.textAlign=al||'center';g.textBaseline='middle';g.fillText(s,x,y)}
-function cover(im,x,y,w,h){if(!im.complete||!im.naturalWidth)return;const k=Math.max(w/im.naturalWidth,h/im.naturalHeight),dw=im.naturalWidth*k,dh=im.naturalHeight*k;g.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
-function contain(im,cx,cy,w,h){if(!im.complete||!im.naturalWidth)return;const k=Math.min(w/im.naturalWidth,h/im.naturalHeight),dw=im.naturalWidth*k,dh=im.naturalHeight*k;g.drawImage(im,cx-dw/2,cy-dh/2,dw,dh)}
-function drawMenu(){const sc=SCN[S.scene],P=sc.p,fo=sc.fo;const b=bgFor();if(b)g.drawImage(b,0,0);else{g.fillStyle='#10161c';g.fillRect(0,0,W,H)}
- const ox=172,oy=126,ow=936,oh=424;g.save();g.beginPath();g.rect(ox,oy,ow,oh);g.clip();cover(img(P+'cabinet_wall.png'),ox,oy,ow,oh);g.restore();
- for(let i=0;i<(grp||24);i++){const [cx,cy]=cell(i),p=opened[i];const im=img(p?P+'safe_open_'+p.tier+'.png':P+'safe_closed.png');cover(im,cx-75,cy-50,150,100);
-  if(p){const pi=img(p.image);contain(pi,cx,cy+6,92,62)}else{txt(i+1,cx+64,cy+43,12,'#e6e8f0')}
-  if(sel==i&&!p){g.strokeStyle='#f5c842';g.lineWidth=3;g.strokeRect(cx-75,cy-50,150,100);g.fillStyle='rgba(0,0,0,.6)';g.fillRect(cx-48,cy-19,96,38);g.strokeRect(cx-48,cy-19,96,38);txt('打 开',cx,cy,20,'#f5c842')}}
- const fw=ow/fo[2],fh=oh/fo[3],fi=img(P+'cabinet_frame.png');if(fi.complete)g.drawImage(fi,ox-fo[0]*fw,oy-fo[1]*fh,fw,fh);
- const ag=A(),pg=PR(),busy=pvOpen||adOpen,spk=!busy&&inr(hz(ag,SPK),mx,my),box=!busy&&!spk&&inr(hz(ag,BOX),mx,my),ph=!busy&&inr(hz(pg,PHIT),mx,my);
- if(ag){if(spk)g.drawImage(img('images/audio_spk_glow.png'),ag.l,ag.t,ag.w,ag.h);if(box||adOpen)g.drawImage(img('images/audio_red_glow.png'),ag.l,ag.t,ag.w,ag.h);g.drawImage(img('images/audio_idle.png'),ag.l,ag.t,ag.w,ag.h)}
- if(pg){if(ph||pvOpen)g.drawImage(img('images/props_glow.png'),pg.l,pg.t,pg.w,pg.h);g.drawImage(img(ph||pvOpen?'images/props_open.png':'images/props_idle.png'),pg.l,pg.t,pg.w,pg.h)}
- const tg=Math.max(1,Math.ceil(prizes.length/24));txt((tg>1?`第 ${grpNo} / ${tg} 组      `:'')+`剩余奖品: ${pool.length}`,640,53,18,'#c8cdd7');
- const done=Object.keys(opened).length>=grp&&grp>0;
- if(done){if(pool.length){g.fillStyle='rgba(255,255,255,.14)';g.fillRect(540,618,200,44);g.strokeStyle='#f5c842';g.lineWidth=1;g.strokeRect(540,618,200,44);txt('刷 新',640,640,22)}else txt('奖品已抽完！按 R 重新开始',640,645,28,'#f5c842')}
- else txt('点击一个保险柜，再点「打开」',640,645,20,'#d7dce8');
- if(!pool.length&&!prizes.length)txt('读取 prizes.json 中…（需通过网址打开）',640,360,26)}
-const TH=document.createElement('div');
-function drawPuzzle(now){g.fillStyle='rgba(0,0,0,.78)';g.fillRect(0,0,W,H);txt('解 密',640,200,44,'#f5c842');txt(`点击屏幕 / 按空格，在绿色区内停住指针（${pz.n}/3）`,640,262,22);
- const x0=340,w=600,y=360;g.fillStyle='#222';g.fillRect(x0,y-24,w,48);g.fillStyle=pz.miss>now?'rgba(230,50,50,.8)':'rgba(60,200,90,.85)';g.fillRect(x0+pz.z,y-24,pz.zw,48);
- g.strokeStyle='#f5c842';g.lineWidth=2;g.strokeRect(x0,y-24,w,48);const ph=((now-pz.t)*pz.sp/1000)%(2*w),m=ph<w?ph:2*w-ph;pz.m=m;g.fillStyle='#fff';g.fillRect(x0+m-3,y-34,6,68)}
-function newZone(){pz.zw=Math.max(60,150-pz.n*35);pz.z=60+Math.random()*(600-pz.zw-120);pz.sp=520+pz.n*180}
-function startPuzzle(i){cur=i;st='puzzle';pz={n:0,t:performance.now(),miss:0};newZone();play('decrypt')}
-function hitPz(){const now=performance.now();if(pz.m>=pz.z&&pz.m<=pz.z+pz.zw){pz.n++;play('click');if(pz.n>=3){stop('decrypt');play('done');setTimeout(()=>{play('open');beginSearch()},350)}else{newZone();pz.t=now}}else pz.miss=now+300}
-function beginSearch(){prize=pick();play('box');st='search';t0=performance.now()}
-function drawSearch(now){g.fillStyle='rgba(0,0,0,.85)';g.fillRect(0,0,W,H);const d=TIERS[prize.tier].s*1000,p=Math.min(1,(now-t0)/d);
- txt('搜 索 中 …',640,300,44,'#f5c842');g.strokeStyle='#f5c842';g.strokeRect(340,380,600,24);g.fillStyle='#f5c842';g.fillRect(342,382,596*p,20);
- const sx=340+((now/6)%600);g.fillStyle='rgba(255,255,255,.35)';g.fillRect(sx,372,4,40);if(p>=1){st='reveal';t0=now;play(['gold','red'].includes(prize.tier)?'rr':'rc')}}
-function drawReveal(now){const c=TIERS[prize.tier].c,a=Math.min(1,(now-t0)/400);g.fillStyle='rgba(0,0,0,.88)';g.fillRect(0,0,W,H);
- const gr=g.createRadialGradient(640,330,20,640,330,380);gr.addColorStop(0,c+'cc');gr.addColorStop(1,'transparent');g.globalAlpha=a*.6;g.fillStyle=gr;g.fillRect(0,0,W,H);g.globalAlpha=a;
- contain(img(prize.image),640,320,420,360);txt(prize.name,640,556,44,c);txt('点击屏幕继续',640,640,20,'#aab');g.globalAlpha=1}
-function loop(now){g.clearRect(0,0,W,H);drawMenu();
- g.fillStyle='#f5c842';g.font='bold 34px "Microsoft YaHei",sans-serif';if(st=='menu'&&!editing)txt(S.title,640,23,34,'#f5c842');
- if(st=='puzzle')drawPuzzle(now);else if(st=='search')drawSearch(now);else if(st=='reveal')drawReveal(now);requestAnimationFrame(loop)}
-function buildPV(){const el=$('pvb');el.innerHTML='';for(const t of['red','gold','purple','blue']){const its=prizes.filter(p=>p.tier==t).sort((a,b)=>b.cells-a.cells);if(!its.length)continue;
- const used=new Set();let rows=0,h='';for(const p of its){const[w,hh]=sz(p);let gy=0,gx=null;while(gx===null){for(let x=0;x<=9-w;x++){let ok=true;for(let i=0;i<w;i++)for(let j=0;j<hh;j++)if(used.has((x+i)+','+(gy+j)))ok=false;if(ok){gx=x;break}}if(gx===null)gy++}
-  for(let i=0;i<w;i++)for(let j=0;j<hh;j++)used.add((gx+i)+','+(gy+j));rows=Math.max(rows,gy+hh);h+=`<div class="it" style="left:${gx*72}px;top:${gy*72}px;width:${w*72-4}px;height:${hh*72-4}px;border-color:${TIERS[t].c}"><img src="${p.image}"><span>${p.name}</span></div>`}
- el.insertAdjacentHTML('beforeend',`<h3 style="color:${TIERS[t].c};width:648px;margin:14px auto 8px">${TN[t]} · ${its.length} 件</h3><div class="gr" style="height:${rows*72}px">${h}</div>`)}}
-function buildAD(){let h='<table>';prizes.forEach((p,i)=>{h+=`<tr data-i="${i}"><td><input class="nm" maxlength="24" value="${p.name.replace(/"/g,'&quot;')}" size="24"></td><td><input class="pr" type="number" min="0" value="${p.price||0}" style="width:80px"></td><td>${[1,2,4,6,9].map(c=>`<span class="cb${p.cells==c?' on':''}" data-c="${c}">${c}</span>`).join('')}<span class="fb${p.flip?' on':''}" style="padding:0 8px">翻转</span></td><td>${['blue','purple','gold','red'].map(t=>`<span class="tb${p.tier==t?' on':''}" data-t="${t}" style="background:${TIERS[t].c}"></span>`).join('')}</td></tr>`});$('adb').innerHTML=h+'</table>'}
-$('adb').addEventListener('input',e=>{const r=e.target.closest('tr'),p=prizes[r.dataset.i];if(e.target.className=='nm')p.name=e.target.value;else p.price=+e.target.value||0;savePr()});
-$('adb').addEventListener('click',e=>{const r=e.target.closest('tr');if(!r)return;const p=prizes[r.dataset.i],c=e.target;if(c.dataset.c)p.cells=+c.dataset.c;else if(c.classList.contains('fb'))p.flip=!p.flip;else if(c.dataset.t)p.tier=c.dataset.t;else return;savePr();const y=$('adb').scrollTop;buildAD();$('adb').scrollTop=y});
-$('pvx').onclick=()=>togPV(false);$('adx').onclick=()=>togAD(false);
-let editing=false;
-function pos(e){const r=cv.getBoundingClientRect(),t=e.touches?e.touches[0]||e.changedTouches[0]:e;return[(t.clientX-r.left)*W/r.width,(t.clientY-r.top)*H/r.height]}
-cv.addEventListener('pointermove',e=>{[mx,my]=pos(e)});
-function togPV(on){pvOpen=on;$('pv').style.display=on?'block':'none';if(on){buildPV();$('pvb').scrollTop=0;play('box')}else play('click')}
-function togAD(on){if(on&&!adOpen)buildAD();else if(!on&&adOpen){savePr();buildPV()}adOpen=on;$('ad').style.display=on?'block':'none';if(on)play('box')}
-cv.addEventListener('pointerdown',e=>{const[x,y]=pos(e);mx=x;my=y;
- if(pvOpen){togPV(false);return}if(adOpen){togAD(false);return}
- if(st=='menu'){const ag=A(),pg=PR();
-  if(inr(hz(pg,PHIT),x,y)){$('vp').style.display='none';return togPV(true)}
-  if(inr(hz(ag,SPK),x,y)){$('vp').style.display=$('vp').style.display=='block'?'none':'block';return}
-  if(inr(hz(ag,BOX),x,y)){$('vp').style.display='none';return togAD(true)}
-  $('vp').style.display='none';
-  if(Object.keys(opened).length>=grp&&grp>0&&pool.length&&x>540&&x<740&&y>618&&y<662){grpNo++;newGroup();play('click');return}}
- if(st=='puzzle')return hitPz();
- if(st=='reveal'){if(performance.now()-t0<500)return;opened[cur]=prize;st='menu';sel=null;return}
- if(st!='menu'||editing)return;
- for(let i=0;i<24;i++){const[cx,cy]=cell(i);if(Math.abs(x-cx)<75&&Math.abs(y-cy)<50&&!opened[i]){if(sel==i&&Math.abs(x-cx)<48&&Math.abs(y-cy)<19){if(pool.length)startPuzzle(i)}else{sel=i;play('click')}return}}sel=null});
-addEventListener('keydown',e=>{if(e.target.tagName=='INPUT'&&e.target.id!='ti')return;if(e.key=='Escape'){if(pvOpen)togPV(false);if(adOpen)togAD(false)}if((e.key=='r'||e.key=='R')&&st=='menu'&&!editing&&!pvOpen&&!adOpen&&confirm('重新开始？'))resetPool();if(e.code=='Space'&&st=='puzzle'){e.preventDefault();hitPz()}if(e.key=='Enter'&&editing)endEdit(true);if(e.key=='Escape'&&editing)endEdit(false)});
-function setScene(n){S.scene=n;$('sb').textContent='场景：'+SCN[n].n+'（点击切换）';save()}
-$('sb').onclick=()=>{if(st=='menu')setScene((S.scene+1)%SCN.length)};setScene(S.scene);
-function endEdit(ok){if(!editing)return;editing=false;if(ok)S.title=$('ti').value.trim()||'保 险 柜 抽 奖';save();$('ti').style.display='none';$('tb').textContent='编辑标题'}
-$('tb').onclick=()=>{if(editing)endEdit(true);else if(st=='menu'){editing=true;$('ti').value=S.title;$('ti').style.display='block';$('tb').textContent='完 成';$('ti').focus()}};
-$('rb').onclick=()=>{if(st=='menu'&&confirm('重置奖池并重新开始？'))resetPool()};
-$('sv').value=S.sv;$('bv').value=S.bv;$('sv').oninput=()=>{S.sv=+$('sv').value;applyVol();save()};$('bv').oninput=()=>{S.bv=+$('bv').value;applyVol();save()};
-$('start').onclick=()=>{$('start').remove();applyVol();play('bgm')};
-requestAnimationFrame(loop);
-</script></body></html>
+/* ========== 配置 ========== */
+const SUPABASE_URL='https://ukytgdqmhyfeaiecnacr.supabase.co';
+const SUPABASE_KEY='sb_publishable_0xvYTyLvmtksPSKTh3-BAQ_rKE0I9RH';   // 公开密钥，可放在网页里；权限由数据库 RLS 控制
+const EMAIL_DOMAIN='@akaido-sales.com';
+
+/* ========== 全局状态与工具 ========== */
+let sb=null, me=null, cur='dashboard', busy=false;
+let D={profiles:[],customers:[],visits:[],attendance:[]};
+const PAGES=['dashboard','checkin','customers','visits','admin','hr'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const money=n=>'RM '+Number(n||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt=x=>x?new Date(x).toLocaleString('en-MY',{hour12:false}):'-';
+const ftime=x=>x?new Date(x).toLocaleTimeString('en-MY',{hour12:false,hour:'2-digit',minute:'2-digit'}):'-';
+const ymd=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
+const isToday=x=>new Date(x).getTime()>=startOfToday();
+const isAdmin=()=>!!me&&me.role==='admin';
+const isSuper=()=>isAdmin()&&me.username==='admin';   // 主 Admin：只有他能新增、停用其他 Admin
+const isStaff=()=>!!me&&me.role==='staff';   // Staff：默认只能使用考勤打卡
+const staffCust=()=>isStaff()&&me.can_customers===true;   // 管理员给 Staff 开启的「客户」权限
+const allowedPages=()=>isStaff()?(staffCust()?['hr','customers']:['hr']):PAGES;
+let custErr='';
+const nameOf=id=>{const p=D.profiles.find(x=>x.id===id);return p?p.name:'-'};
+// 用于把文字安全地塞进 onclick="fn('...')" 这种单引号 JS 字符串里：先转义反斜杠和单引号，再做HTML转义
+const jsAttr=s=>esc(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+const custName=id=>{if(!id)return '';const c=D.customers.find(x=>x.id===id);return c?c.name:'（客户已删除）'};
+const salesList=()=>D.profiles.filter(p=>p.role==='sales'&&p.active);
+const mapLink=(lat,lng)=>(lat==null||lng==null)?'-':'<a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+Number(lat)+','+Number(lng)+'">地图</a>';
+const gpsText=(lat,lng)=>(lat==null||lng==null)?'-':Number(lat).toFixed(5)+', '+Number(lng).toFixed(5);
+
+let toastTimer;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800)}
+async function guard(fn){
+  if(busy)return;
+  busy=true;
+  try{await fn()}catch(e){console.error(e);toast('出错：'+((e&&e.message)?e.message:e))}
+  finally{busy=false}
+}
+function loginMsg(t){const p=$('loginMsg');p.textContent=t||'';p.classList.toggle('hidden',!t)}
+
+/* 潜在订单：每个客户只取「最近一次拜访」填写的金额，避免重复累加 */
+function potMap(){const m=new Map();for(const v of D.visits){if(!m.has(v.customer_id))m.set(v.customer_id,Number(v.potential_order||0))}return m}
+function potentialFor(ownerId){const m=potMap();let s=0;D.customers.forEach(c=>{if(!ownerId||c.owner_id===ownerId)s+=(m.get(c.id)||0)});return s}
+
+/* ========== 登录 / 退出 ========== */
+async function doLogin(){
+  loginMsg('');
+  if(!sb){loginMsg('无法加载网络组件，请检查网络后刷新页面');return}
+  const u=$('lu').value.trim().toLowerCase(),p=$('lp').value;
+  if(!u||!p){loginMsg('请输入账号和密码');return}
+  const btn=$('loginBtn');btn.disabled=true;btn.textContent='登录中…';
+  try{
+    const {data,error}=await sb.auth.signInWithPassword({email:u.includes('@')?u:u+EMAIL_DOMAIN,password:p});
+    if(error){loginMsg(/invalid login/i.test(error.message)?'账号或密码错误':'登录失败：'+error.message);return}
+    await enter(data.user);
+  }catch(e){console.error(e);loginMsg('登录失败：'+(e.message||e))}
+  finally{btn.disabled=false;btn.textContent='登录 LOGIN'}
+}
+async function enter(user){
+  const {data:prof,error}=await sb.from('profiles').select('*').eq('id',user.id).single();
+  if(error||!prof){await sb.auth.signOut();loginMsg('找不到账号资料，请联系管理员');return}
+  if(!prof.active){await sb.auth.signOut();loginMsg('此账号已停用，请联系管理员');return}
+  me=prof;
+  me.pwdChanged=!!(user.user_metadata&&user.user_metadata.pwd_changed);
+  await loadAll();
+  if(me.role!=='sales'&&me.track_attendance!==false)await regDevice();
+  $('login').classList.add('hidden');$('app').classList.remove('hidden');
+  $('userline').textContent=me.name+' · '+me.role.toUpperCase();
+  applyNav();
+  page(isStaff()?'hr':'dashboard');
+}
+function applyNav(){
+  const allow=isStaff()?allowedPages():null;
+  document.querySelectorAll('.nav button').forEach(b=>{
+    if(b.id==='navAdmin'){b.classList.toggle('hidden',!isAdmin());return}
+    if(me.role==='sales'&&b.dataset.p==='hr'){b.classList.add('hidden');return}
+    b.classList.toggle('hidden',!!allow&&!allow.includes(b.dataset.p));
+  });
+}
+async function logout(){me=null;try{await sb.auth.signOut()}catch(e){}location.reload()}
+async function refresh(){await guard(async()=>{await loadAll();applyNav();page(cur);toast('已刷新')})}
+
+/* ========== 读取数据（数据库 RLS 已按账号过滤：Sales 只会拿到自己的，Admin 拿到全部） ========== */
+let cardUrls={};
+const cardSrc=p=>p?(cardUrls[p]||null):null;
+async function loadCardUrls(customers){
+  const paths=[...new Set(customers.map(c=>c.card_photo).filter(Boolean))];
+  if(!paths.length){cardUrls={};return}
+  const {data,error}=await sb.storage.from('business-cards').createSignedUrls(paths,3600);
+  const next={};
+  if(!error&&data)data.forEach(d=>{if(d&&d.path&&d.signedUrl)next[d.path]=d.signedUrl});
+  cardUrls=next;
+}
+async function loadAll(){
+  if(isStaff()){   // Staff：不读拜访、外勤；只有被开启「客户」权限时才读自己的客户
+    const pr=await sb.from('profiles').select('*').eq('id',me.id).single();   // 重新读取，管理员刚改的权限马上生效
+    if(pr.data)Object.assign(me,pr.data);
+    D={profiles:[me],customers:[],visits:[],attendance:[]};
+    custErr='';
+    if(staffCust()){
+      const r=await sb.from('customers').select('*').order('created_at',{ascending:false});
+      if(r.error)custErr=r.error.message||String(r.error);else D.customers=r.data;
+      await loadCardUrls(D.customers);
+    }
+    await loadHR();
+    return;
+  }
+  const rs=await Promise.all([
+    sb.from('profiles').select('*').order('username'),
+    sb.from('customers').select('*').order('created_at',{ascending:false}),
+    sb.from('visits').select('*').order('created_at',{ascending:false}),
+    sb.from('attendance').select('*').order('created_at',{ascending:false}).limit(1000)
+  ]);
+  for(const r of rs){if(r.error)throw r.error}
+  D={profiles:rs[0].data,customers:rs[1].data,visits:rs[2].data,attendance:rs[3].data};
+  await loadCardUrls(D.customers);
+  Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});   // 让 me（余额、到期日、Schedule 等）跟数据库保持一致
+  await loadHR();
+}
+
+/* ========== 页面切换 ========== */
+function showSection(p){
+  cur=p;clearInterval(hrTimer);
+  PAGES.forEach(x=>$(x).classList.toggle('hidden',x!==p));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  window.scrollTo(0,0);
+}
+function page(p){
+  if(isStaff()&&!allowedPages().includes(p))p='hr';   // Staff 只能进被允许的页面
+  showSection(p);
+  ({dashboard:renderDashboard,checkin:renderCheckin,customers:renderCustomers,visits:renderVisits,admin:renderAdmin,hr:renderHR})[p]();
+}
+
+/* ========== 首页 ========== */
+function statBox(v,l){return '<div class="stat"><b>'+v+'</b><span>'+l+'</span></div>'}
+function renderDashboard(){
+  const admin=isAdmin();
+  const inToday=D.attendance.filter(a=>a.type==='IN'&&isToday(a.created_at));
+  const visitsToday=D.visits.filter(v=>isToday(v.created_at));
+  const gradeA=D.customers.filter(c=>c.grade==='A').length;
+  const due=D.customers.filter(c=>c.follow_up&&c.follow_up<=ymd()).sort((a,b)=>a.follow_up.localeCompare(b.follow_up));
+  let stats;
+  if(admin){
+    const sales=salesList(),checked=new Set(inToday.map(a=>a.user_id));
+    stats=statBox(sales.length,'Sales 人数')+statBox(sales.filter(s=>checked.has(s.id)).length+' / '+sales.length,'今日已打卡')+
+      statBox(visitsToday.length,'今日拜访')+statBox(D.customers.length,'客户总数')+statBox(gradeA,'A 级客户')+statBox(money(potentialFor()),'潜在订单');
+  }else{
+    stats=statBox(inToday.length?'已打卡':'未打卡','今日打卡')+statBox(visitsToday.length,'今日拜访')+
+      statBox(D.customers.length,'我的客户')+statBox(gradeA,'A 级客户')+statBox(due.length,'待跟进')+statBox(money(potentialFor()),'潜在订单');
+  }
+  let h='<h2>📊 '+(admin?'管理首页':'我的首页')+'</h2>';
+  if(!me.pwdChanged)h+='<div class="banner"><b>⚠️ 请先修改默认密码。</b>当前账号仍在使用初始密码，任何知道账号名的人都可能登录。请在页面最下方的「修改我的密码」修改。</div>';
+  h+='<div class="grid">'+stats+'</div><p class="muted" style="margin:-4px 0 12px">潜在订单 = 各客户最近一次拜访所填金额之和。</p>';
+  if(admin)h+=salesTable();
+  h+='<div class="card"><h3>📅 待跟进客户 <span class="muted">（共 '+due.length+' 家）</span></h3>'+dueGrouped(due,admin)+'</div>';
+  h+='<div class="card"><h3>🔒 修改我的密码</h3><input id="pw1" type="password" placeholder="新密码（至少 8 位）" autocomplete="new-password"><input id="pw2" type="password" placeholder="再输入一次新密码" autocomplete="new-password"><button class="btn" onclick="changePassword()">保存新密码</button></div>';
+  $('dashboard').innerHTML=h;
+}
+function dueGrouped(due,admin){
+  if(!due.length)return '<div class="muted">目前没有到期的跟进</div>';
+  const today=ymd(),map=new Map();
+  due.forEach(c=>{const k=admin?(c.owner_id||'-'):c.follow_up;if(!map.has(k))map.set(k,[]);map.get(k).push(c)});
+  let groups=[...map.entries()].map(([k,list])=>({k,list,od:list.filter(c=>c.follow_up<today).length}));
+  // admin：逾期最多的 Sales 排前面；员工：日期由旧到新
+  groups.sort(admin?((a,b)=>b.od-a.od||b.list.length-a.list.length):((a,b)=>a.k.localeCompare(b.k)));
+  const openAll=groups.length===1;
+  const html=groups.map(g=>{
+    let label,badge='';
+    if(admin){label=esc(nameOf(g.k)||'未分配');if(g.od)badge='<span class="fod">逾期 '+g.od+'</span>'}
+    else{label=esc(g.k)+(g.k<today?'（逾期）':'（今天）')}
+    const rows=g.list.map(c=>'<div class="frow"><div class="fmain">'+esc(c.name)+' <span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+'</span></div>'+
+      (admin?'<small class="'+(c.follow_up<today?'red':'muted')+'">'+esc(c.follow_up.slice(5))+'</small>':'')+
+      '<button class="btn fbtn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button></div>').join('');
+    return '<details class="fgrp"'+(openAll?' open':'')+'><summary><span class="fname">'+label+'</span>'+badge+'<span class="fcnt">'+g.list.length+'</span></summary>'+rows+'</details>';
+  }).join('');
+  const tools=groups.length>1?'<div class="ftools"><a onclick="toggleDue(this)">全部展开</a></div>':'';
+  return tools+'<div class="fwrap">'+html+'</div>';
+}
+function toggleDue(a){
+  const ds=a.closest('.card').querySelectorAll('details.fgrp'),open=a.textContent==='全部展开';
+  ds.forEach(d=>d.open=open);a.textContent=open?'全部收起':'全部展开';
+}
+function salesTable(){
+  const rows=salesList().map(u=>{
+    const ins=D.attendance.filter(a=>a.user_id===u.id&&a.type==='IN'&&isToday(a.created_at)).sort((a,b)=>a.created_at.localeCompare(b.created_at));
+    const v=D.visits.filter(x=>x.sales_id===u.id&&isToday(x.created_at)).length;
+    const c=D.customers.filter(x=>x.owner_id===u.id).length;
+    return '<tr><td>'+esc(u.name)+'</td><td>'+(ins.length?'✅ '+ftime(ins[0].created_at):'—')+'</td><td>'+v+'</td><td>'+c+'</td><td>'+money(potentialFor(u.id))+'</td></tr>';
+  }).join('');
+  return '<div class="card"><h3>👨‍💼 Sales 今日情况</h3><div class="table"><table><tr><th>Sales</th><th>今日打卡</th><th>今日拜访</th><th>客户数</th><th>潜在订单</th></tr>'+rows+'</table></div></div>';
+}
+async function changePassword(){
+  const box=$(cur),a=box.querySelector('#pw1').value,b=box.querySelector('#pw2').value;  // 首页和考勤页各有一组 pw1/pw2，只读当前页面这一组
+  if(a.length<8){toast('新密码至少 8 位');return}
+  if(a!==b){toast('两次输入的密码不一致');return}
+  if(a==='123456'){toast('不能继续使用 123456');return}
+  await guard(async()=>{
+    const {error}=await sb.auth.updateUser({password:a,data:{pwd_changed:true}});
+    if(error)throw error;
+    me.pwdChanged=true;toast('密码已修改，下次请用新密码登录');page(cur);
+  });
+}
+
+/* ========== 打卡 ========== */
+function getPos(timeout){
+  return new Promise((res,rej)=>{
+    if(!navigator.geolocation)return rej({code:0});
+    navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:timeout||12000,maximumAge:0});
+  });
+}
+function geoMsg(e){return e&&e.code===1?'请允许网页使用定位权限':e&&e.code===2?'定位失败，请到信号好的地方重试':e&&e.code===3?'定位超时，请重试':'此浏览器不支持定位'}
+let ckDate=ymd(),ckSales='',vSales='';
+const salesOpts=sel=>'<option value="">全部 Sales</option>'+D.profiles.filter(p=>p.role==='sales').slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(p=>'<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+(p.active?'':'（已停用）')+'</option>').join('');
+function onDate(x,d){return ymd(new Date(x))===d}
+function filterCheckin(){ckDate=$('ckDate').value||ymd();renderCheckinBody()}
+function filterCheckinSales(){ckSales=$('ckSales').value;if($('exSales'))$('exSales').value=ckSales;renderCheckinBody()}   // 下载栏的 Sales 默认跟着这里选的
+function renderCheckin(){
+  const custs=(isAdmin()?D.customers:D.customers.filter(c=>c.owner_id===me.id)).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const custOpts='<option value="">请选择客户…</option>'+custs.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  $('checkin').innerHTML='<h2>📍 外勤打卡</h2><div class="card">'+
+    '<label>这次打卡是去拜访哪位客户？（必选）</label><select id="ckCust">'+custOpts+'</select>'+(custs.length?'':'<p class="red" style="margin:0 0 8px">你还没有客户，请先到「客户」页新增客户，才能打卡。</p>')+
+    '<div class="row"><button class="btn" onclick="attend(\'IN\')">📍 CHECK IN</button><button class="btn secondary" onclick="attend(\'OUT\')">🏁 CHECK OUT</button></div>'+
+    '<p class="muted">今日状态：'+(D.attendance.some(a=>a.user_id===me.id&&a.type==='IN'&&isToday(a.created_at))?'已 Check In':'尚未 Check In')+'。打卡会记录 GPS 位置，请在弹出的提示里选择「允许」。</p></div>'+
+    '<div class="card">'+(isAdmin()?'<div class="row" style="flex-wrap:nowrap;gap:8px"><select id="ckSales" style="flex:1;min-width:0;margin:0" onchange="filterCheckinSales()">'+salesOpts(ckSales)+'</select><input id="ckDate" type="date" style="width:auto;flex:none;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div>':'<div class="row between"><h3 style="margin:0">查看日期</h3><input id="ckDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div>')+'</div>'+
+    '<div id="ckBody"></div>'+
+    '<div class="card"><h3>导出打卡记录</h3>'+(isAdmin()?'<label>选择 Sales</label><select id="exSales">'+salesOpts(ckSales)+'</select>':'')+'<div class="row"><input id="exFrom" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd(new Date(Date.now()-6*86400000))+'"><span class="muted">至</span><input id="exTo" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd()+'"></div><button class="btn secondary full" onclick="exportAttendance()">⬇ 下载这段日期的打卡记录（CSV）</button><p class="muted">可用 Excel 打开。'+(isAdmin()?'不选 Sales 就导出全部。':'只导出我自己的记录。')+'</p></div>';
+  renderCheckinBody();
+}
+function exportAttendance(){
+  const from=$('exFrom').value,to=$('exTo').value;
+  if(!from||!to){toast('请选择开始和结束日期');return}
+  if(from>to){toast('开始日期不能晚于结束日期');return}
+  const fs=isAdmin()&&$('exSales')?$('exSales').value:'';
+  const list=D.attendance.filter(a=>{const d=ymd(new Date(a.created_at));return d>=from&&d<=to&&(!fs||a.user_id===fs)}).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
+  if(!list.length){toast(fs?nameOf(fs)+' 这段日期没有打卡记录':'这段日期没有打卡记录');return}
+  const header=['Sales','类型','时间','客户','纬度','经度','精度(m)'];
+  const rows=list.map(a=>[nameOf(a.user_id),a.type,fmt(a.created_at),custName(a.customer_id)||'',a.lat!=null?a.lat:'',a.lng!=null?a.lng:'',a.accuracy!=null?Math.round(a.accuracy):'']);
+  const csvEsc=s=>{s=String(s==null?'':s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const csv='\uFEFF'+[header,...rows].map(r=>r.map(csvEsc).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='AKAIDO-打卡记录-'+(fs?nameOf(fs)+'-':'')+from+'_to_'+to+'.csv';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast('已导出 '+list.length+' 条记录');
+}
+function renderCheckinBody(){
+  const d=ckDate,label=d===ymd()?'今天':d;
+  const mine=D.attendance.filter(a=>a.user_id===me.id&&onDate(a.created_at,d));
+  let h='<div class="card"><h3>我的记录（'+esc(label)+'）</h3>'+(mine.length?mine.map(a=>
+    '<div class="item"><b>'+esc(a.type)+'</b> · '+fmt(a.created_at)+(a.customer_id?'<br>客户：<span class="red">'+esc(custName(a.customer_id))+'</span>':'')+'<br><small>GPS '+gpsText(a.lat,a.lng)+' · 精度 '+(a.accuracy!=null?Math.round(a.accuracy)+'m':'-')+' · '+mapLink(a.lat,a.lng)+'</small></div>').join(''):'<div class="muted">这一天没有打卡记录</div>')+'</div>';
+  if(isAdmin()){
+    const list=D.attendance.filter(a=>onDate(a.created_at,d)&&(!ckSales||a.user_id===ckSales));
+    h+='<div class="card"><h3>'+(ckSales?esc(nameOf(ckSales)):'全部 Sales')+' 打卡记录（'+esc(label)+'）· '+list.length+' 条</h3><div class="table"><table><tr><th>Sales</th><th>类型</th><th>时间</th><th>客户</th><th>位置</th><th>精度</th></tr>'+
+      (list.length?list.map(a=>'<tr><td>'+esc(nameOf(a.user_id))+'</td><td>'+esc(a.type)+'</td><td>'+fmt(a.created_at)+'</td><td>'+(a.customer_id?'<span class="red">'+esc(custName(a.customer_id))+'</span>':'-')+'</td><td>'+mapLink(a.lat,a.lng)+'</td><td>'+(a.accuracy!=null?Math.round(a.accuracy)+'m':'-')+'</td></tr>').join(''):'<tr><td colspan="6" class="muted">这一天没有记录</td></tr>')+'</table></div></div>';
+  }
+  $('ckBody').innerHTML=h;
+}
+async function attend(type){
+  await guard(async()=>{
+    const custEl=$('ckCust');
+    const custId=custEl&&custEl.value?custEl.value:null;
+    if(!custId){toast('请先选择客户，才能打卡');return}
+    toast('正在获取 GPS…');
+    let pos;
+    try{pos=await getPos(12000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}
+    const {error}=await sb.from('attendance').insert({user_id:me.id,type:type,customer_id:custId,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy});
+    if(error)throw error;
+    await loadAll();renderCheckin();toast(type==='IN'?'Check In 成功':'Check Out 成功');
+  });
+}
+
+/* ========== 客户 ========== */
+let cfS='',cfG='',cfB='';   // 客户页筛选：Sales / 等级 / 状态
+const cfActive=()=>!!(cfS||cfG||cfB);
+function syncCustFilters(){
+  if($('ex_s'))cfS=$('ex_s').value;
+  if($('ex_g'))cfG=$('ex_g').value;
+  if($('ex_b'))cfB=$('ex_b').value;
+}
+function custFiltered(q){
+  const admin=isAdmin();
+  return D.customers.filter(c=>(!cfS||c.owner_id===cfS)&&(!cfG||c.grade===cfG)&&(!cfB||(c.is_customer||'No')===cfB)&&(!q||[c.name,c.contact,c.phone,c.office_no,c.address,admin?nameOf(c.owner_id):''].join(' ').toLowerCase().includes(q)));
+}
+function clearCustFilters(){cfS=cfG=cfB='';renderCustomers()}
+function custList(q){
+  const pm=potMap(),admin=isAdmin(),today=ymd();
+  const list=custFiltered(q);
+  if(!list.length)return '<div class="muted" style="margin-top:8px">'+((q||cfActive())?'没有符合的客户':'还没有客户，点上方「新增客户」')+'</div>'+(cfActive()?'<button class="btn secondary" style="margin-top:8px" onclick="clearCustFilters()">清除筛选</button>':'');
+  return '<div class="row between" style="margin:2px 0 4px"><span class="muted">共 '+list.length+' 位'+(cfActive()?'（已筛选）':'')+'</span>'+(cfActive()?'<button class="btn secondary" style="padding:6px 10px" onclick="clearCustFilters()">清除筛选</button>':'')+'</div>'+list.map(c=>{
+    const overdue=c.follow_up&&c.follow_up<=today;
+    return '<div class="item"><div class="row between"><b>'+esc(c.name)+'</b><div class="row" style="gap:6px;width:auto">'+((c.kow_hock||'No')==='Yes'?'<span class="badge" style="background:#fde8e8;color:#b42318">Kow Hock</span>':'')+(c.is_customer==='Blacklist'?'<span class="badge" style="background:#111;color:#fff">Black list</span>':(c.is_customer||'No')==='Yes'?'<span class="badge" style="background:#e8f7ee;color:#16834a">已是客户</span>':'<span class="badge" style="background:#eee;color:#666">未成为客户</span>')+'<span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="badge" style="background:#e8eef8;color:#123B7A">'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天')+'</span><span class="badge" style="background:#eee;color:#444">'+esc(c.payment_method||'Cheque')+'</span></div></div>'+
+      '<small>'+esc(c.contact||'-')+' · '+esc(c.phone||'-')+(c.office_no?' · 未获取电话号码：'+esc(c.office_no):'')+'</small><br><small>'+esc(c.address||'-')+'</small>'+
+      '<div class="muted" style="margin-top:4px">'+(admin?'负责人：'+esc(nameOf(c.owner_id))+' · ':'')+'下次跟进：<span class="'+(overdue?'red':'')+'">'+esc(c.follow_up||'-')+'</span>'+(isStaff()?'':' · 潜在订单 '+money(pm.get(c.id)||0))+(c.card_photo?(cardSrc(c.card_photo)?' · <a target="_blank" rel="noopener" href="'+esc(cardSrc(c.card_photo))+'">名片</a>':' · 名片（加载中，点刷新）'):'')+'</div>'+
+      '<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="showCustomer(\''+esc(c.id)+'\')">'+(isStaff()?'详情':'详情/历史')+'</button><button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button>'+(isStaff()?'':'<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">拜访</button>')+'</div></div>';
+  }).join('');
+}
+function filterCustomers(){syncCustFilters();$('clist').innerHTML=custList($('cq').value.trim().toLowerCase())}
+function dlCSV(filename,header,rows){
+  const esc2=v=>{v=String(v==null?'':v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const csv='\uFEFF'+[header,...rows].map(r=>r.map(esc2).join(',')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+const txtNo=v=>v?'\t'+v:'';   // 电话前加 Tab，Excel 不会吞掉开头的 0
+function exportCustomers(){
+  if(!me||isStaff())return;
+  const admin=isAdmin();
+  syncCustFilters();
+  const q=$('cq')?$('cq').value.trim().toLowerCase():'';
+  const list=custFiltered(q).filter(c=>admin||c.owner_id===me.id).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!list.length){toast('没有客户可导出');return}
+  const pm=potMap();
+  const header=['客户名称','Sales','等级','联系人','电话','未获取电话号码','地址','账期','付款方式','Kow Hock / Franchise','已成为客户','竞品','产品','下次跟进','潜在订单(RM)','备注'];
+  const rows=list.map(c=>[c.name,nameOf(c.owner_id),c.grade,c.contact,txtNo(c.phone),txtNo(c.office_no),c.address,c.payment_term==='COD'?'COD':(c.payment_term||'COD')+'天',c.payment_method||'Cheque',c.kow_hock||'No',custTxt(c.is_customer),c.competitor,c.products,c.follow_up,Number(pm.get(c.id)||0).toFixed(2),c.remarks]);
+  dlCSV('AKAIDO-客户明细-'+(admin?(cfS?nameOf(cfS):'全部'):me.name)+(cfG?'-'+cfG+'级':'')+(cfB?'-'+cfB:'')+'-'+ymd()+'.csv',header,rows);
+  toast('已导出 '+list.length+' 位客户');
+}
+function renderCustomers(){
+  const gradeOpts='<option value="">全部等级</option>'+['A','B','C'].map(g=>'<option'+(cfG===g?' selected':'')+'>'+g+'</option>').join('');
+  const statOpts='<option value="">全部状态</option>'+[['No','No'],['Yes','Yes'],['Blacklist','Black list']].map(o=>'<option value="'+o[0]+'"'+(cfB===o[0]?' selected':'')+'>'+o[1]+'</option>').join('');
+  $('customers').innerHTML='<h2>👥 客户 CRM</h2>'+(custErr?'<div class="banner">客户数据读取失败：'+esc(custErr)+'（请确认已运行 staff-customers.sql）</div>':'')+'<div class="card"><button class="btn full" onclick="customerForm()">＋ 新增客户</button></div>'+
+    '<div class="card"><input id="cq" placeholder="搜索客户 / 联系人 / 电话 / 地址" oninput="filterCustomers()">'+(isStaff()?'':'<div class="row" style="margin-bottom:10px">'+(isAdmin()?'<select id="ex_s" style="width:auto;margin:0" onchange="filterCustomers()">'+salesOpts(cfS)+'</select>':'')+'<select id="ex_g" style="width:auto;margin:0" onchange="filterCustomers()">'+gradeOpts+'</select><select id="ex_b" style="width:auto;margin:0" onchange="filterCustomers()">'+statOpts+'</select><button class="btn secondary" onclick="exportCustomers()">⬇ 下载客户资料（CSV）</button></div><p class="muted" style="margin:-4px 0 10px">选择后会筛选下面的列表；下载的就是列表里的这些客户。</p>')+'<div id="clist">'+custList('')+'</div></div>';
+}
+function showCustomer(id){
+  showSection('customers');
+  const c=D.customers.find(x=>x.id===id);
+  if(!c){renderCustomers();return}
+  const vs=D.visits.filter(v=>v.customer_id===id);
+  const pm=potMap();
+  $('customers').innerHTML='<h2>👥 '+esc(c.name)+'</h2>'+
+   '<div class="card"><div class="row between"><span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+' 级</span><span class="muted">'+(isAdmin()?'负责人：'+esc(nameOf(c.owner_id)):'')+'</span></div>'+
+   '<p>联系人：'+esc(c.contact||'-')+'<br>电话：'+esc(c.phone||'-')+'<br>未获取电话号码：'+esc(c.office_no||'-')+'<br>地址：'+esc(c.address||'-')+'<br>账期：'+esc(c.payment_term==='COD'?'COD':(c.payment_term||'COD')+' 天')+'<br>付款方式：'+esc(c.payment_method||'Cheque')+'<br>Kow Hock / Franchise：'+esc(c.kow_hock||'No')+'<br>已成为我们客户：'+esc(custTxt(c.is_customer))+'<br>竞品：'+esc(c.competitor||'-')+'<br>产品：'+esc(c.products||'-')+'<br>下次跟进：'+esc(c.follow_up||'-')+(isStaff()?'':'<br>潜在订单：'+money(pm.get(c.id)||0))+'<br>备注：'+esc(c.remarks||'-')+'</p>'+
+   (c.card_photo?(cardSrc(c.card_photo)?'<img src="'+esc(cardSrc(c.card_photo))+'" alt="名片" style="max-width:240px;width:100%;border-radius:10px;border:1px solid #e5e7eb;display:block;margin-top:4px">':'<p class="muted">名片图片加载中，请点右上角「↻ 刷新」</p>'):'')+
+   '<div class="row">'+(isStaff()?'':'<button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">＋ 新增拜访</button>')+'<button class="btn secondary" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button><button class="btn secondary" onclick="renderCustomers()">返回列表</button></div></div>'+
+   (isStaff()?'':'<div class="card"><h3>拜访历史（'+vs.length+'）</h3>'+(vs.length?vs.map(v=>visitItem(v,false)).join(''):'<div class="muted">还没有拜访记录</div>')+'</div>');
+}
+let cardPath=null;    // 存进 customers.card_photo 的值：Storage 里的路径（私密桶，没有公开链接）
+let cardPreview=null; // 仅用于表单里即时预览的临时签名链接，不会存进数据库
+function renderCardPreview(){
+  const box=$('cardPreview');if(!box)return;
+  box.innerHTML=cardPreview?
+    ('<img src="'+esc(cardPreview)+'" alt="名片" style="max-width:200px;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;display:block;margin-bottom:8px">'+
+     '<button type="button" class="btn secondary" style="margin-bottom:8px" onclick="removeCard()">移除照片</button>')
+    :(cardPath?'<div class="muted" style="margin-bottom:8px">已有名片照片（预览生成中或刷新后可见）</div><button type="button" class="btn secondary" style="margin-bottom:8px" onclick="removeCard()">移除照片</button>'
+             :'<div class="muted" style="margin-bottom:8px">还没有上传名片照片</div>');
+}
+function removeCard(){cardPath=null;cardPreview=null;renderCardPreview()}
+async function uploadCard(file){
+  if(!file)return;
+  if(!/^image\//.test(file.type||'')){toast('请选择图片文件');return}
+  if(file.size>8*1024*1024){toast('图片不能超过 8MB');return}
+  await guard(async()=>{
+    toast('正在上传名片…');
+    const ext=((file.name||'').split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    const path='cards/'+me.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.'+ext;
+    const up=await sb.storage.from('business-cards').upload(path,file,{upsert:true,contentType:file.type||'image/jpeg'});
+    if(up.error)throw up.error;
+    const signed=await sb.storage.from('business-cards').createSignedUrl(path,3600);
+    cardPath=path;
+    cardPreview=(signed&&signed.data&&signed.data.signedUrl)||null;
+    renderCardPreview();
+    toast('名片已上传');
+  });
+}
+const PAYMENT_TERMS=['COD','30','60','90','120','150'];
+const PAYMENT_METHODS=['Cheque','Online Transfer'];
+const KOWHOCK_OPTIONS=['Yes','No'];
+const CUST_OPTS=[['No','No'],['Yes','Yes'],['Blacklist','没有来往了（Black list）']];
+const custTxt=v=>({Yes:'Yes',Blacklist:'没有来往了（Black list）'}[v]||'No');
+function customerForm(id){
+  showSection('customers');
+  const c=id?D.customers.find(x=>x.id===id):{name:'',contact:'',phone:'',office_no:'',address:'',grade:'B',competitor:'',products:'',remarks:'',follow_up:'',owner_id:'',card_photo:null,payment_term:'COD',payment_method:'Cheque',kow_hock:'No',is_customer:'No'};
+  if(!c){renderCustomers();return}
+  cardPath=c.card_photo||null;
+  cardPreview=cardPath?cardSrc(cardPath):null;
+  const admin=isAdmin();
+  let ownerSel='';
+  if(admin){
+    const opts=D.profiles.filter(p=>(p.role==='sales'&&p.active)||p.id===c.owner_id);
+    const sel=c.owner_id||(opts[0]&&opts[0].id)||me.id;
+    ownerSel='<label>所属 Sales（可重新分配）</label><select id="c_owner">'+opts.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select>';
+  }
+  $('customers').innerHTML='<h2>👥 '+(id?'编辑':'新增')+'客户</h2><div class="card">'+
+   '<label>客户名称 *</label><input id="c_name" value="'+esc(c.name)+'">'+
+   '<label>联系人 / 老板</label><input id="c_contact" value="'+esc(c.contact)+'">'+
+   '<label>电话（与下面至少选一个填）</label><input id="c_phone" type="tel" value="'+esc(c.phone)+'">'+
+   '<label>未获取电话号码（没有电话时填这里）</label><input id="c_office" type="text" placeholder="选填，例如：只有公司座机 03-12345678" value="'+esc(c.office_no)+'">'+
+   '<label>客户等级</label><select id="c_grade">'+['A','B','C'].map(g=>'<option'+(c.grade===g?' selected':'')+'>'+g+'</option>').join('')+'</select>'+
+   '<label>账期 Term</label><select id="c_term">'+PAYMENT_TERMS.map(t=>'<option value="'+esc(t)+'"'+((c.payment_term||'COD')===t?' selected':'')+'>'+esc(t==='COD'?'COD':t+' 天')+'</option>').join('')+'</select>'+
+   '<label>付款方式 Payment</label><select id="c_pay">'+PAYMENT_METHODS.map(p=>'<option value="'+esc(p)+'"'+((c.payment_method||'Cheque')===p?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select>'+
+   '<label>Kow Hock / Franchise</label><select id="c_kh">'+KOWHOCK_OPTIONS.map(k=>'<option value="'+esc(k)+'"'+((c.kow_hock||'No')===k?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select>'+
+   '<label>已经成为我们客户吗？</label><select id="c_isc">'+CUST_OPTS.map(o=>'<option value="'+o[0]+'"'+((c.is_customer||'No')===o[0]?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>'+
+   '<label>地址</label><input id="c_addr" value="'+esc(c.address)+'">'+
+   '<label>竞品</label><input id="c_comp" value="'+esc(c.competitor)+'">'+
+   '<label>使用 / 有兴趣的产品</label><input id="c_prod" value="'+esc(c.products)+'">'+
+   '<label>下次跟进日期</label><input id="c_fu" type="date" value="'+esc(c.follow_up||'')+'">'+
+   '<label>备注</label><textarea id="c_rem">'+esc(c.remarks)+'</textarea>'+
+   '<label>名片照片</label><div id="cardPreview"></div><input id="c_card" type="file" accept="image/*" onchange="uploadCard(this.files[0])"><p class="muted" style="margin-top:4px">点击后可以选择拍照，也可以从手机相册里选取已有的照片。</p>'+ownerSel+
+   '<div class="row"><button class="btn" onclick="saveCustomer('+(id?'\''+esc(id)+'\'':'null')+')">保存</button><button class="btn secondary" onclick="renderCustomers()">取消</button>'+
+   (id&&admin?'<button class="btn danger" onclick="deleteCustomer(\''+esc(id)+'\')">删除客户</button>':'')+'</div></div>';
+  renderCardPreview();
+}
+async function saveCustomer(id){
+  const name=$('c_name').value.trim();
+  if(!name){toast('请输入客户名称');return}
+  if(!$('c_phone').value.trim()&&!$('c_office').value.trim()){toast('电话和「未获取电话号码」至少选一个填');return}
+  const row={name:name,contact:$('c_contact').value.trim(),phone:$('c_phone').value.trim(),office_no:$('c_office').value.trim()||null,grade:$('c_grade').value,address:$('c_addr').value.trim(),
+    competitor:$('c_comp').value.trim(),products:$('c_prod').value.trim(),remarks:$('c_rem').value.trim(),follow_up:$('c_fu').value||null,card_photo:cardPath,payment_term:$('c_term').value,payment_method:$('c_pay').value,kow_hock:$('c_kh').value,is_customer:$('c_isc').value};
+  if(isAdmin()&&$('c_owner'))row.owner_id=$('c_owner').value;
+  await guard(async()=>{
+    if(!id&&!row.owner_id)row.owner_id=me.id;
+    const run=()=>id?sb.from('customers').update(row).eq('id',id):sb.from('customers').insert(row);
+    let r=await run(),skipped=false;
+    if(r.error&&/is_customer/.test(r.error.message||'')){delete row.is_customer;skipped=true;r=await run()}   // 数据库字段还没建：其他资料照常保存
+    if(r.error)throw r.error;
+    await loadAll();renderCustomers();
+    toast(skipped?'其他资料已保存，但「已成为客户」还没启用，请联系管理员':'客户已保存');
+  });
+}
+async function deleteCustomer(id){
+  if(!confirm('确定删除这个客户？该客户的所有拜访记录也会一起删除，无法恢复。'))return;
+  await guard(async()=>{
+    const r=await sb.from('customers').delete().eq('id',id);
+    if(r.error)throw r.error;
+    await loadAll();renderCustomers();toast('客户已删除');
+  });
+}
+
+/* ========== 拜访 ========== */
+function visitItem(v,showCustomer){
+  const c=D.customers.find(x=>x.id===v.customer_id);
+  return '<div class="item"><b>'+esc(showCustomer?(c?c.name:'（已删除的客户）'):fmt(v.created_at))+'</b>'+
+    '<br><small class="muted">'+(showCustomer?fmt(v.created_at)+' · ':'')+esc(nameOf(v.sales_id))+' · 见到老板：'+(v.met_owner?'是':'否')+(v.lat!=null?' · '+mapLink(v.lat,v.lng):'')+'</small>'+
+    (v.products_interest?'<br>产品：'+esc(v.products_interest):'')+(v.need?'<br>需求：'+esc(v.need):'')+(v.feedback?'<br>反馈：'+esc(v.feedback):'')+(v.competitor?'<br>竞品/价格：'+esc(v.competitor):'')+
+    '<br>潜在订单：<b>'+money(v.potential_order)+'</b>'+(v.next_follow_up?' · 下次跟进：'+esc(v.next_follow_up):'')+'</div>';
+}
+let vDate=ymd(),vQ='';
+function filterVisits(){vDate=$('vDate').value||'';renderVisitsBody()}
+function clearVisitDate(){vDate='';renderVisits()}
+function todayVisits(){vDate=ymd();renderVisits()}
+function filterVisitSales(){vSales=$('vSales').value;renderVisitsBody()}
+function filterVisitQ(){vQ=$('vq').value.trim().toLowerCase();renderVisitsBody()}
+function visitFiltered(){
+  return D.visits.filter(v=>(!vDate||onDate(v.created_at,vDate))&&(!vSales||v.sales_id===vSales)&&(!vQ||[custName(v.customer_id),nameOf(v.sales_id),v.products_interest,v.need,v.feedback,v.competitor].join(' ').toLowerCase().includes(vQ)));
+}
+function renderVisits(){
+  const dIn='<input id="vDate" type="date" style="width:auto;flex:none;margin:0" max="'+ymd()+'" value="'+esc(vDate)+'" onchange="filterVisits()">';
+  const bt=(vDate?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="clearVisitDate()">全部日期</button>':'')+(vDate!==ymd()?'<button class="btn secondary" style="padding:8px 10px;margin:0" onclick="todayVisits()">今天</button>':'');
+  $('visits').innerHTML='<h2>📝 拜访记录</h2><div class="card"><button class="btn full" onclick="visitPicker()">＋ 新增拜访</button></div>'+
+    '<div class="card">'+(isAdmin()?'<div class="row" style="flex-wrap:nowrap;gap:8px"><select id="vSales" style="flex:1;min-width:0;margin:0" onchange="filterVisitSales()">'+salesOpts(vSales)+'</select>'+dIn+'</div>'+(bt?'<div class="row" style="gap:6px;margin-top:8px">'+bt+'</div>':''):'<div class="row between"><h3 style="margin:0">查看日期</h3><div class="row" style="gap:6px">'+dIn+bt+'</div></div>')+
+    '<input id="vq" placeholder="搜索客户 / Sales / 产品 / 需求 / 反馈" style="margin-top:10px" value="'+esc(vQ)+'" oninput="filterVisitQ()"><button class="btn secondary full" onclick="exportVisits()">⬇ 下载拜访记录（CSV）</button><p class="muted" style="margin:6px 0 0">下载的是下面列出的这些记录（按所选日期、Sales 和搜索）。</p></div><div id="vBody"></div>';
+  renderVisitsBody();
+}
+function renderVisitsBody(){
+  const all=visitFiltered(),list=vDate?all:all.slice(0,100);
+  const title=(vSales?esc(nameOf(vSales))+' ':'')+(vDate?'拜访记录（'+esc(vDate===ymd()?'今天':vDate)+'）':'拜访记录（全部日期'+(all.length>100?'，显示最近 100 条':'')+'）');
+  $('vBody').innerHTML='<div class="card"><h3>'+title+' · '+all.length+' 条</h3>'+(list.length?list.map(v=>visitItem(v,true)).join(''):'<div class="muted">没有符合的拜访记录</div>')+'</div>';
+}
+function exportVisits(){
+  const list=visitFiltered().slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
+  if(!list.length){toast('没有可下载的拜访记录');return}
+  dlCSV('AKAIDO-拜访记录-'+(vSales?nameOf(vSales)+'-':'')+(vDate||'全部日期')+'.csv',['日期时间','Sales','客户','见到老板','产品 / 促销项目','客户需求','客户反馈','竞品 / 价格','潜在订单(RM)','下次跟进','位置'],list.map(v=>[fmt(v.created_at),nameOf(v.sales_id),custName(v.customer_id),v.met_owner?'是':'否',v.products_interest||'',v.need||'',v.feedback||'',v.competitor||'',Number(v.potential_order||0).toFixed(2),v.next_follow_up||'',gpsText(v.lat,v.lng)]));
+  toast('已导出 '+list.length+' 条记录');
+}
+function pickerList(q){
+  const list=D.customers.filter(c=>!q||[c.name,c.contact,c.phone,c.office_no,c.address].join(' ').toLowerCase().includes(q));
+  return list.length?list.map(c=>'<div class="item row between"><div><b>'+esc(c.name)+'</b> <span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+'</span><br><small class="muted">'+esc(c.address||'')+'</small></div><button class="btn" onclick="visitForm(\''+esc(c.id)+'\')">开始拜访</button></div>').join(''):'<div class="muted" style="margin-top:8px">没有客户，请先到「客户」页新增</div>';
+}
+function filterPicker(){$('plist').innerHTML=pickerList($('pq').value.trim().toLowerCase())}
+function visitPicker(){
+  if(isStaff())return;
+  showSection('visits');
+  $('visits').innerHTML='<h2>选择要拜访的客户</h2><div class="card"><input id="pq" placeholder="搜索客户" oninput="filterPicker()"><div id="plist">'+pickerList('')+'</div><button class="btn secondary" style="margin-top:10px" onclick="renderVisits()">返回</button></div>';
+}
+const PRODUCT_OPTIONS=['12V','21V Cordless','Corded','Measuring Tools','Vacuum','Water Jet','Power Bank','Grease','Measuring Tape','Yendare Product','ADX Cutting Disc','Offer Item'];
+function visitForm(cid){
+  if(isStaff())return;
+  showSection('visits');
+  const c=D.customers.find(x=>x.id===cid);
+  if(!c){renderVisits();return}
+  const prodBoxes=PRODUCT_OPTIONS.map(p=>'<label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:400;width:auto"><input type="checkbox" class="vprod" value="'+esc(p)+'" style="width:auto;margin:0"> '+esc(p)+'</label>').join('');
+  $('visits').innerHTML='<h2>📝 拜访报告</h2><div class="card"><div class="item"><b>'+esc(c.name)+'</b> <span class="badge g-'+esc(c.grade)+'">'+esc(c.grade)+'</span></div>'+
+   '<label style="margin-top:10px">见到老板？</label><select id="v_owner"><option value="1">是</option><option value="0">否</option></select>'+
+   '<label>产品 / 促销项目（可多选）</label><div class="row" style="flex-wrap:wrap;row-gap:8px;column-gap:16px;margin-bottom:10px">'+prodBoxes+'</div>'+
+   '<label>客户需求</label><textarea id="v_need"></textarea>'+
+   '<label>客户反馈</label><textarea id="v_fb"></textarea>'+
+   '<label>竞品 / 价格</label><input id="v_comp" value="'+esc(c.competitor||'')+'">'+
+   '<label>潜在订单 RM</label><input id="v_pot" type="number" min="0" step="0.01" inputmode="decimal" value="0">'+
+   '<label>下一次跟进</label><input id="v_fu" type="date">'+
+   '<label style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:400"><input id="v_gps" type="checkbox" checked style="width:auto;margin:0"> 同时记录我现在的 GPS 位置</label>'+
+   '<div class="row" style="margin-top:10px"><button class="btn" onclick="saveVisit(\''+esc(cid)+'\')">保存拜访</button><button class="btn secondary" onclick="renderVisits()">取消</button></div></div>';
+}
+async function saveVisit(cid){
+  const pot=Number($('v_pot').value||0);
+  if(!(pot>=0)){toast('潜在订单金额不正确');return}
+  const wantGps=$('v_gps').checked;
+  const prods=Array.prototype.slice.call(document.querySelectorAll('.vprod')).filter(el=>el.checked).map(el=>el.value).join(', ');
+  const base={customer_id:cid,sales_id:me.id,met_owner:$('v_owner').value==='1',need:$('v_need').value.trim(),feedback:$('v_fb').value.trim(),
+    competitor:$('v_comp').value.trim(),potential_order:pot,next_follow_up:$('v_fu').value||null,products_interest:prods||null};
+  await guard(async()=>{
+    let gpsFailed=false;
+    if(wantGps){
+      toast('正在获取位置…');
+      try{const p=await getPos(8000);base.lat=p.coords.latitude;base.lng=p.coords.longitude}catch(e){gpsFailed=true}
+    }
+    const r=await sb.from('visits').insert(base);
+    if(r.error)throw r.error;
+    if(base.next_follow_up){
+      const u=await sb.from('customers').update({follow_up:base.next_follow_up}).eq('id',cid);
+      if(u.error)throw u.error;
+    }
+    await loadAll();renderVisits();
+    toast(gpsFailed?'拜访已保存（未能取得 GPS 位置）':'拜访记录已保存');
+  });
+}
+
+/* ========== 管理员后台 ========== */
+function renderAdmin(){
+  if(!isAdmin()){$('admin').innerHTML='<h2>⚙️ 后台</h2><div class="card">只有管理员可以使用后台。</div>';return}
+  const allSales=D.profiles.filter(p=>p.role==='sales').slice().sort((a,b)=>a.username.localeCompare(b.username));
+  const allStaff=D.profiles.filter(p=>p.role==='staff').slice().sort((a,b)=>a.username.localeCompare(b.username));
+  const todayKL=klDate(Date.now());
+  const staffRows=allStaff.map(u=>{
+    const rc=H.records.find(r=>r.user_id===u.id&&r.work_date===todayKL);
+    const sch=H.schedules.find(x=>x.id===u.schedule_id);
+    const days=H.records.filter(r=>r.user_id===u.id&&r.work_date.startsWith(hrMonth)).length;
+    const lab=(k,t)=>'<label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:400;font-size:13px;color:inherit;white-space:nowrap"><input type="checkbox" style="width:auto;margin:0" '+(u[k]===true?'checked':'')+' onchange="setStaffPerm(\''+esc(u.id)+'\',\''+k+'\',this.checked)"> '+t+'</label>';
+    const permCell='<div style="display:grid;gap:4px">'+lab('can_customers','客户')+lab('can_att_download','下载记录')+'</div>';
+    return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td><td>'+esc(u.dept||'-')+'</td><td>'+esc(sch?sch.name:'未设置')+'</td><td>'+(rc?'✅ '+klHM(rc.clock_in)+(rc.clock_out?' - '+klHM(rc.clock_out):''):'—')+'</td><td>'+days+'</td>'+
+      '<td><div class="row" style="gap:6px"><button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>'+
+      '<button class="btn secondary" style="padding:6px 10px" onclick="hrTab=\'rec\';fEmp=\''+esc(u.id)+'\';page(\'hr\')">出勤</button>'+
+      (u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>'
+               :'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>')+
+      '<button class="btn danger" style="padding:6px 10px" onclick="delStaff(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">删除</button></div></td><td>'+permCell+'</td></tr>';
+  }).join('');
+  const allAdmins=D.profiles.filter(p=>p.role==='admin').slice().sort((a,b)=>a.username.localeCompare(b.username));
+  const sup=isSuper();
+  const adminRows=allAdmins.map(u=>{
+    const self=u.id===me.id,main=u.username==='admin';
+    const btns=[];
+    if(sup||self)btns.push('<button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>');
+    if(sup&&!self)btns.push(u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>':'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>');
+    return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(main?' <span class="badge" style="background:#e8eef8;color:#123B7A">主 Admin</span>':'')+(self?' <span class="muted">（我）</span>':'')+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td>'+
+      '<td><div class="row" style="gap:6px">'+(btns.join('')||'<span class="muted">—</span>')+'</div></td></tr>';
+  }).join('');
+
+  const staff=allSales.map(u=>{
+    const ins=D.attendance.some(a=>a.user_id===u.id&&a.type==='IN'&&isToday(a.created_at));
+    return '<tr'+(u.active?'':' style="opacity:.55"')+'><td>'+esc(u.name)+(u.active?'':' <span class="muted">（已停用）</span>')+'</td><td>'+esc(u.username)+'</td><td>'+(ins?'✅':'—')+'</td><td>'+D.customers.filter(c=>c.owner_id===u.id).length+'</td><td>'+D.visits.filter(v=>v.sales_id===u.id).length+'</td>'+
+      '<td><div class="row" style="gap:6px"><button class="btn secondary" style="padding:6px 10px" onclick="renameSales(\''+esc(u.id)+'\',\''+jsAttr(u.name)+'\')">改名</button>'+
+      (u.active?'<button class="btn danger" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',true)">停用</button>'
+               :'<button class="btn" style="padding:6px 10px" onclick="toggleSalesActive(\''+esc(u.id)+'\',false)">启用</button>')+
+      '</div></td></tr>';
+  }).join('');
+  const custRows=D.customers.map(c=>{
+    const opts=D.profiles.filter(p=>(p.role==='sales'&&p.active)||p.id===c.owner_id);
+    return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.grade)+'</td><td><select onchange="reassign(\''+esc(c.id)+'\',this.value)">'+opts.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===c.owner_id?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></td><td>'+esc(c.follow_up||'-')+'</td><td><button class="btn secondary" style="padding:6px 10px" onclick="customerForm(\''+esc(c.id)+'\')">编辑</button></td></tr>';
+  }).join('');
+  $('admin').innerHTML='<h2>⚙️ Admin 后台</h2>'+
+   '<div class="card"><h3>新增账号</h3>'+
+   '<label>账号名（登录用，仅英文/数字/下划线）</label><input id="nu_username" placeholder="例如 sales06" autocapitalize="none" autocorrect="off" spellcheck="false">'+
+   '<label>姓名</label><input id="nu_name" placeholder="例如 Sales 06">'+
+   '<label>角色</label><select id="nu_role"><option value="sales">Sales</option><option value="staff">Staff（仓库 / 办公室）</option>'+(isSuper()?'<option value="admin">Admin</option>':'')+'</select>'+
+   '<label>初始密码（至少 8 位）</label><input id="nu_pass" type="password" placeholder="创建后请让本人登录就改密码">'+
+   '<button class="btn full" onclick="createUserAccount()">创建账号</button>'+
+   '<p class="muted">创建后把账号名和这个初始密码告诉对方，并请他登录后立刻在首页修改密码。停用账号或重置密码，仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
+   '<div class="card"><h3>Sales 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>今日打卡</th><th>客户数</th><th>拜访数</th><th>操作</th></tr>'+(staff||'<tr><td colspan="6" class="muted">暂无 Sales</td></tr>')+'</table></div><p class="muted">停用后这个人无法登录，但历史的客户、拜访、打卡记录都会保留，随时可以重新启用。重置密码仍需到 Supabase 后台的 Authentication → Users 操作。</p></div>'+
+   '<div class="card"><h3>Staff（办公室 / 仓库）管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>部门</th><th>Schedule</th><th>今日打卡</th><th>本月出勤</th><th>操作</th><th>权限</th></tr>'+(staffRows||'<tr><td colspan="8" class="muted">暂无 Staff，可在上方「新增账号」选择角色 Staff 创建</td></tr>')+'</table></div><p class="muted">Staff 默认只能使用考勤打卡；勾选「权限 → 客户」后，可使用客户页面（只能看到和编辑自己新增的客户，没有拜访、外勤）；勾选「下载记录」后，可在「考勤 → 我的出勤」下载自己的本月明细。停用后无法登录，历史打卡记录会保留。「出勤」可直接查看此人的考勤明细；部门和 Schedule 到「考勤 → 员工」修改。</p></div>'+
+   '<div class="card"><h3>Admin 管理</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>操作</th></tr>'+(adminRows||'<tr><td colspan="3" class="muted">暂无 Admin</td></tr>')+'</table></div><p class="muted">Admin 拥有全部权限（客户、拜访、考勤、后台）。只有主 Admin（账号 admin）可以新增 Admin，以及停用、启用其他 Admin；其他 Admin 只能改自己的名字。</p></div>'+
+   '<div class="card"><h3>全部客户与负责人（可直接重新分配）</h3><div class="table"><table><tr><th>客户</th><th>等级</th><th>所属 Sales</th><th>跟进</th><th></th></tr>'+(custRows||'<tr><td colspan="5" class="muted">暂无客户</td></tr>')+'</table></div></div>'+
+   '<div class="card"><h3>数据备份</h3><button class="btn secondary" onclick="backup()">导出 JSON 备份</button><p class="muted">导出当前可见的全部客户、拜访、打卡（最近 1000 条）记录。</p></div>';
+}
+async function setStaffPerm(id,key,val){
+  await guard(async()=>{
+    const r=await sb.from('profiles').update({[key]:val}).eq('id',id);
+    if(r.error){renderAdmin();throw r.error}
+    await loadAll();renderAdmin();
+    toast(val?'已开启，对方刷新或重新登录后生效':'已关闭');
+  });
+}
+async function renameSales(id,currentName){
+  const tg=D.profiles.find(x=>x.id===id);
+  if(tg&&tg.role==='admin'&&tg.id!==me.id&&!isSuper()){toast('只有主 Admin（账号 admin）可以修改其他 Admin');return}
+  const input=prompt('输入新的姓名',currentName);
+  if(input===null)return;
+  const name=input.trim();
+  if(!name){toast('姓名不能为空');return}
+  await guard(async()=>{
+    const r=await sb.from('profiles').update({name}).eq('id',id);
+    if(r.error)throw r.error;
+    await loadAll();renderAdmin();
+    toast('姓名已更新');
+  });
+}
+async function toggleSalesActive(id,isActive){
+  const tg=D.profiles.find(x=>x.id===id);
+  if(tg&&tg.role==='admin'&&!isSuper()){toast('只有主 Admin（账号 admin）可以停用或启用 Admin');return}
+  const verb=isActive?'停用':'启用';
+  if(!confirm('确定要'+verb+'这个账号吗？'+(isActive?'停用后对方将无法登录，但他的客户、拜访、打卡记录都会保留，可随时重新启用。':'')))return;
+  await guard(async()=>{
+    const r=await sb.from('profiles').update({active:!isActive}).eq('id',id);
+    if(r.error)throw r.error;
+    await loadAll();renderAdmin();
+    toast('已'+verb);
+  });
+}
+async function createUserAccount(){
+  const username=($('nu_username').value||'').trim().toLowerCase();
+  const name=($('nu_name').value||'').trim();
+  const role=$('nu_role').value;
+  const pass=$('nu_pass').value;
+  if(!/^[a-z0-9_]{3,20}$/.test(username)){toast('账号名：3-20 位小写字母、数字或下划线');return}
+  if(!name){toast('请填写姓名');return}
+  if(pass.length<8){toast('密码至少 8 位');return}
+  if(role==='admin'&&!isSuper()){toast('只有主 Admin（账号 admin）可以新增 Admin');return}
+  await guard(async()=>{
+    const {data,error}=await sb.functions.invoke('admin-create-user',{body:{username,name,role,password:pass}});
+    if(error)throw error;
+    if(!data||!data.ok){toast((data&&data.error)||'创建失败');return}
+    $('nu_username').value='';$('nu_name').value='';$('nu_pass').value='';$('nu_role').value='sales';
+    await loadAll();renderAdmin();
+    toast(data.warning?('账号已创建，但 '+data.warning):'账号已创建：'+username);
+  });
+}
+async function reassign(cid,oid){
+  await guard(async()=>{
+    const r=await sb.from('customers').update({owner_id:oid}).eq('id',cid);
+    if(r.error)throw r.error;
+    await loadAll();renderAdmin();toast('已重新分配负责 Sales');
+  });
+}
+function backup(){
+  const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),profiles:D.profiles,customers:D.customers,visits:D.visits,attendance:D.attendance},null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='AKAIDO-backup-'+ymd()+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+
+/* ========== 考勤 HR ========== */
+const KL='Asia/Kuala_Lumpur';
+const klDate=x=>new Date(x).toLocaleDateString('en-CA',{timeZone:KL});
+const klHM=x=>x?new Date(x).toLocaleTimeString('en-GB',{timeZone:KL,hour12:false,hour:'2-digit',minute:'2-digit'}):'-';
+const klMin=x=>{const [h,m]=klHM(x).split(':').map(Number);return h*60+m};
+const hm=n=>n?Math.floor(n/60)+'h'+String(n%60).padStart(2,'0')+'m':'0';
+const okRule=v=>/^(OFF|([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d)$/.test(v);
+const ruleOf=(s,d)=>{if(!s)return null;const w=new Date(d+'T00:00:00Z').getUTCDay();return w===0?s.sun:w===6?s.sat:s.weekday};
+let H={schedules:[],locations:[],settings:{ot_grace_min:30,ot_unit:'30',late_grace_min:0,enforce_geofence:true,lunch_auto:true,lunch_start:'13:00',lunch_end:'14:00'},records:[],from:'',err:''},hrTab='mine',hrMonth=klDate(Date.now()).slice(0,7),fEmp='',hrTimer=null,cam=null,camPos=null,camType='';
+async function loadHR(){await loadDev();await loadLv();return loadHR0()}
+async function loadHR0(){
+  const m=hrMonth,y=+m.slice(0,4),mo=+m.slice(5,7),nxt=mo===12?(y+1)+'-01-01':y+'-'+String(mo+1).padStart(2,'0')+'-01';
+  const errs=[];
+  const pick=(x,def)=>{if(x.error){errs.push(x.error.message||String(x.error));return def}return x.data};
+  try{
+    let q=sb.from('hr_clock_records').select('*').gte('work_date',m+'-01').lt('work_date',nxt).order('work_date',{ascending:false}).order('clock_in',{ascending:false}).limit(1000);
+    if(!isAdmin())q=q.eq('user_id',me.id);   // 非 Admin 只取自己的记录
+    const r=await Promise.all([sb.from('hr_schedules').select('*').order('created_at'),sb.from('hr_locations').select('*').order('created_at'),sb.from('hr_settings').select('*').eq('id',1).maybeSingle(),
+      q,sb.from('hr_clock_records').select('*').eq('user_id',me.id).eq('work_date',klDate(Date.now())).maybeSingle()]);
+    H={...H,schedules:pick(r[0],[]),locations:pick(r[1],[]),settings:pick(r[2],null)||H.settings,records:pick(r[3],[]),today:pick(r[4],null),err:errs[0]||''};
+  }catch(e){H.err=e.message||String(e)}
+  try{   // 外出记录：失败（例如还没运行 SQL）时只是隐藏外出功能
+    let oq=sb.from('hr_outings').select('*').gte('work_date',m+'-01').lt('work_date',nxt).order('out_at',{ascending:true}).limit(3000);
+    if(!isAdmin())oq=oq.eq('user_id',me.id);
+    const o=await Promise.all([oq,sb.from('hr_outings').select('*').eq('user_id',me.id).eq('work_date',klDate(Date.now())).order('out_at',{ascending:true})]);
+    if(o[0].error||o[1].error){H.outOk=false;H.outs=[];H.todayOuts=[]}
+    else{H.outOk=true;H.outs=o[0].data;H.todayOuts=o[1].data}
+  }catch(e){H.outOk=false;H.outs=[];H.todayOuts=[]}
+}
+
+/* 迟到 / 早退 / OT：规则用打卡当天的快照；休息日工时单独列出，不算 OT；星期六另有规则（见 calc） */
+const SAT_OT_FROM=14*60;
+const isSat=d=>!!d&&new Date(d+'T00:00:00Z').getUTCDay()===6;
+function calc(r){
+  const o={late:0,early:0,ot:0,rest:0,worked:0,note:''},s=H.settings;
+  if(!r.clock_in)return o;
+  const a=klMin(r.clock_in);let b=null;
+  if(r.clock_out){b=klMin(r.clock_out)+(klDate(r.clock_out)>r.work_date?1440:0);o.worked=Math.max(0,b-a)}
+  const rule=r.sched_rule,sat=isSat(r.work_date);
+  if(!rule){o.note='未设置 Schedule';return o}
+  if(rule==='OFF'&&!sat){o.rest=o.worked;o.note='休息日';return o}   // 星期六不走休息日工时，改按下面的星期六 OT
+  let en=null;
+  if(rule!=='OFF'){
+    const m=/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(rule);
+    if(!m){o.note='规则格式错误';return o}
+    const st=+m[1]*60+ +m[2];en=+m[3]*60+ +m[4];
+    if(a-st>s.late_grace_min)o.late=a-st;
+  }
+  if(b==null){if(r.work_date<klDate(Date.now()))o.note='忘记下班打卡';return o}   // 没下班就没有 OT 数字
+  if(en!=null&&b<en)o.early=en-b;
+  if(lvHalves(r.user_id,r.work_date).pm)return o;   // 请了下午假：留到下午的时间不算 OT
+  if(sat){   // 星期六：OT 从 14:00 起算，不管 Schedule 下班时间，没有起算门槛，每分钟都算
+    const L=H.outOk?(H.outs||[]).find(x=>x.user_id===r.user_id&&x.work_date===r.work_date&&x.kind==='lunch'&&x.back_at):null;
+    let ot=Math.max(0,b-SAT_OT_FROM);
+    if(L)ot-=Math.max(0,klMin(L.back_at)-Math.max(klMin(L.out_at),SAT_OT_FROM));   // 午休拖过 14:00 的部分不算 OT
+    o.ot=Math.max(0,ot);
+    if(!L&&H.outOk)o.note='没按午休';   // 没按午休：照样扣掉 13:00–14:00（OT 本来就从 14:00 起算）
+    return o;
+  }
+  if(b>en&&b-en>s.ot_grace_min){o.ot=b-en}   // 超过门槛才有 OT；有 OT 时从下班时间起算，每一分钟都算
+  return o;
+}
+function openModal(h){$('modalBox').innerHTML=h;$('modal').classList.remove('hidden')}
+function stopCam(){if(cam){cam.getTracks().forEach(t=>t.stop());cam=null}}
+function closeModal(){stopCam();$('modal').classList.add('hidden');$('modalBox').innerHTML=''}
+const hrErr=m=>{
+  m=String(m||'');
+  const lunchOpen=(H.todayOuts||[]).some(o=>!o.back_at&&o.kind==='lunch');
+  const fence=()=>{const d=/约\s*(\d+)\s*米/.exec(m);return d?'不在公司范围内（约 '+d[1]+' 米）':'不在公司范围内'};
+  const rules=[
+    [/Could not find the function/,'此功能还没启用，请联系管理员'],
+    [/DEVICE_REQUIRED/,'读取不到手机信息，请用 Chrome 或 Safari 的正常窗口打开'],
+    [/DEVICE_/,'此手机还未获批准，请联系管理员'],
+    [/NOT_LOGGED_IN/,'登录已过期，请重新登录'],
+    [/GPS_REQUIRED/,'取不到定位，请打开手机定位'],
+    [/SELFIE_REQUIRED/,'拍照没成功，请重试'],
+    [/OUT_OF_FENCE/,fence],
+    [/NOT_CLOCKED_IN_OR_ALREADY_OUT/,'还没上班，或已经下班了'],
+    [/NOT_CLOCKED_OUT/,'还没下班，不用回来上班'],
+    [/RESUME_TOO_LATE/,'下班超过 4 小时，请联系管理员'],
+    [/AWAY_NO_RESUME/,'已外出后直接下班，不能再上班'],
+    [/EARLY_REASON_REQUIRED/,'提早下班请写理由'],
+    [/REASON_REQUIRED/,'请写外出理由'],
+    [/LUNCH_ALREADY/,'今天已午休过'],
+    [/NOT_LUNCH/,'没有进行中的午休'],
+    [/ALREADY_OUT/,lunchOpen?'你正在午休，请先点「午休结束」':'你正在外出，请先点「回公司」'],
+    [/NOT_OUT/,'没有未回公司的外出'],
+    [/ALREADY_CLOCKED_IN/,'今天已上班打卡'],
+    [/NOT_CLOCKED_IN/,'还没上班，或已经下班了'],
+    [/ACCOUNT_NOT_ALLOWED/,'此账号不能打卡，请联系管理员']
+  ];
+  for(const r of rules)if(r[0].test(m))return typeof r[1]==='function'?r[1]():r[1];
+  return '打卡失败：'+m;
+};
+
+function renderHR(){
+  clearInterval(hrTimer);
+  const admin=isAdmin(),tab=admin?hrTab:'mine';
+  let h='<h2>🕐 考勤</h2>';
+  if(H.err)h+='<div class="banner">考勤数据读取失败：'+esc(H.err)+'</div>';
+  if(!me.pwdChanged)h+='<div class="banner"><b>⚠️ 请先修改默认密码。</b>请到本页最下方「修改我的密码」。</div>';
+  if(admin)h+='<div class="row" style="margin-bottom:10px">'+[['mine','我的打卡'],['rec','出勤记录'],['emp','员工'+(DV.some(d=>d.status==='pending')?' 🔴':'')],['leave','请假'],['sch','Schedule'],['set','地点与设置']].map(t=>'<button class="btn '+(tab===t[0]?'':'secondary')+'" onclick="hrTab=\''+t[0]+'\';renderHR()">'+t[1]+'</button>').join('')+'</div>';
+  h+=({mine:tabMine,rec:tabRec,emp:tabEmp,sch:tabSch,set:tabSet,leave:tabLeave})[tab]();
+  if(tab==='mine')h+='<div class="card"><h3>🔒 修改我的密码</h3><input id="pw1" type="password" placeholder="新密码（至少 8 位）" autocomplete="new-password"><input id="pw2" type="password" placeholder="再输入一次新密码" autocomplete="new-password"><button class="btn" onclick="changePassword()">保存新密码</button></div>';
+  $('hr').innerHTML=h;
+}
+function tabMine(){
+  const t=klDate(Date.now()),s=H.schedules.find(x=>x.id===me.schedule_id),rc=H.today;
+  let h='<div class="card"><div class="muted">'+t+' · 马来西亚时间</div><div id="hrNow" style="font-size:38px;font-weight:800">'+klHM(Date.now())+'</div><p class="muted">今日规则：'+(s?esc(s.name)+' · '+esc(todayRule(s,t)):'未设置 Schedule，请联系管理员')+'<br>上班 '+(rc?klHM(rc.clock_in):'-')+' · 下班 '+(rc&&rc.clock_out?klHM(rc.clock_out):'-')+'</p>';
+  if(me.track_attendance===false)h+='<div class="muted">此账号不需要考勤打卡</div>';
+  else if(me.devState==='pending'||me.devState==='revoked'){h+='<div class="banner">📱 '+(me.devState==='pending'?'此手机还未获批准，暂时不能打卡。请联系管理员，批准后点「重新检查」。':'此手机已被取消绑定，请联系管理员。')+'</div><button class="btn secondary" onclick="recheckDev()">重新检查</button>'}
+  else{
+    const outNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind!=='lunch'),lunchNow=(H.todayOuts||[]).find(o=>!o.back_at&&o.kind==='lunch'),lunchDone=(H.todayOuts||[]).find(o=>o.kind==='lunch'&&o.back_at);
+    h+='<div class="row"><button class="btn" '+(rc?'disabled':'')+' onclick="camOpen(\'in\')">🟢 上班打卡</button><button class="btn secondary" '+(!rc||rc.clock_out||outNow||lunchNow?'disabled':'')+' onclick="camOpen(\'out\')">🔴 下班打卡</button></div>';
+    if(H.outOk&&rc&&!rc.clock_out&&!outNow){
+      if(lunchNow)h+='<div class="banner" style="margin-top:8px">🍱 午休中 · 开始 '+klHM(lunchNow.out_at)+'<br>已午休 <b id="lunchT" data-t="'+esc(lunchNow.out_at)+'">'+lunchTxt(lunchNow.out_at)+'</b></div><div class="row"><button class="btn" onclick="lunchEnd()">🍱 午休结束</button></div><p class="muted" style="margin:6px 0 0">需在公司范围内才能按。</p>';
+      else if(!lunchDone)h+='<div class="row" style="margin-top:8px"><button class="btn secondary" onclick="lunchStart()">🍱 午休开始</button></div>';
+      else h+='<p class="muted" style="margin:8px 0 0">今天午休：'+klHM(lunchDone.out_at)+' - '+klHM(lunchDone.back_at)+'（'+lunchTxt(lunchDone.out_at,lunchDone.back_at)+'）</p>';
+    }
+    if(H.outOk&&rc&&!rc.clock_out&&!lunchNow)h+='<div class="row" style="margin-top:8px">'+(outNow?'<button class="btn" onclick="backGo()">🏢 回公司</button>':'<button class="btn secondary" onclick="outOpen()">🚶 外出（写理由）</button>')+'</div>'+(outNow?'<p class="red" style="margin:8px 0 0">外出中（'+klHM(outNow.out_at)+' 起）。回公司（需在公司范围内）后才能下班。</p>':'');
+    if(H.outOk&&rc&&!rc.clock_out&&outNow)h+='<div class="row" style="margin-top:8px"><button class="btn danger" onclick="if(confirm(\'确定不回公司，直接下班？\'))camOpen(\'outend\')">🏠 外出后直接下班</button></div><p class="muted" style="margin:6px 0 0">不回公司了，直接下班按这里。</p>';
+    if(H.todayOuts&&H.todayOuts.length)h+='<div class="muted" style="margin-top:8px">今日外出：'+H.todayOuts.map(o=>'<br>'+klHM(o.out_at)+' - '+(o.back_at?klHM(o.back_at):'<span class="red">未回</span>')+' · '+esc(o.reason)+(o.kind==='lunch'&&o.back_at?'（'+lunchTxt(o.out_at,o.back_at)+'）':'')).join('')+'</div>';
+  }
+  h+='<p class="muted">每天只有「上班打卡」要拍照，其余只记录定位。请允许相机和定位。时间以服务器为准。</p></div>';
+  hrTimer=setInterval(()=>{const e=$('hrNow');if(e)e.textContent=klHM(Date.now());const l=$('lunchT');if(l)l.textContent=lunchTxt(l.dataset.t)},10000);
+  return h+leaveCard()+monthCard(me.id);
+}
+function monthBar(){return '<input type="month" style="width:auto;margin:0" value="'+hrMonth+'" onchange="setMonth(this.value)">'}
+async function setMonth(v){if(!v)return;hrMonth=v;const td=klDate(Date.now());recDay=v===td.slice(0,7)?td:v+'-01';await guard(async()=>{await loadHR();renderHR()})}
+async function setRecDay(v){if(!v)return;recDay=v;if(v.slice(0,7)!==hrMonth){hrMonth=v.slice(0,7);await guard(async()=>{await loadHR();renderHR()})}else renderHR()}   // 选到别的月份时，自动读取那个月的数据
+function monthCard(uid){
+  const rs=H.records.filter(r=>r.user_id===uid&&r.work_date.startsWith(hrMonth)),T={late:0,early:0,ot:0,rest:0};
+  const rows=rs.map(r=>{const c=calc(r);for(const k in T)T[k]+=c[k];return '<tr><td>'+r.work_date+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+outCell(r)+'</td><td>'+esc(noteOf(r,c))+'</td></tr>'}).join('');
+  return '<div class="card"><div class="row between"><h3 style="margin:0">我的出勤</h3>'+monthBar()+(canDl()?'<button class="btn secondary" style="padding:6px 12px" onclick="exportRec(true)">⬇ 下载本月明细</button>':'')+'</div><p class="muted">'+rs.length+' 天 · 迟到 '+hm(T.late)+' · 早退 '+hm(T.early)+' · OT '+hm(T.ot)+(T.rest?' · 休息日工时 '+hm(T.rest):'')+'</p><div class="table"><table><tr><th>日期</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>外出</th><th>备注</th></tr>'+(rows||'<tr><td colspan="9" class="muted">本月没有记录</td></tr>')+'</table></div></div>';
+}
+/* ----- 外出 / 回公司（不影响上班、下班打卡）----- */
+const lunchTxt=(a,b)=>{const m=Math.max(0,Math.floor(((b?new Date(b):Date.now())-new Date(a))/60000));return Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m'};
+async function lunchCall(fn,okMsg){await guard(async()=>{toast('正在获取 GPS…');let p;try{p=await getPos(15000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}const {error}=await sb.rpc(fn,{p_lat:p.coords.latitude,p_lng:p.coords.longitude,p_accuracy:p.coords.accuracy});if(error){toast(hrErr(error.message));return}await loadHR();renderHR();toast(okMsg+' '+klHM(Date.now()))})}
+const lunchStart=()=>lunchCall('hr_lunch_start','午休开始');
+const lunchEnd=()=>lunchCall('hr_lunch_end','午休结束');
+const mapUrl=(lat,lng)=>'https://www.google.com/maps?q='+Number(lat)+','+Number(lng);
+const hasPos=(a,b)=>a!=null&&b!=null;
+const posLinks=o=>{
+  const a=hasPos(o.out_lat,o.out_lng)?'<a target="_blank" rel="noopener" href="'+mapUrl(o.out_lat,o.out_lng)+'">出发</a>':'';
+  const b=hasPos(o.back_lat,o.back_lng)?'<a target="_blank" rel="noopener" href="'+mapUrl(o.back_lat,o.back_lng)+'">回来</a>':'';
+  return (a||b)?' <small>📍'+[a,b].filter(Boolean).join(' · ')+'</small>':'';
+};
+const posPlain=o=>[hasPos(o.out_lat,o.out_lng)?'出发 '+mapUrl(o.out_lat,o.out_lng):'',hasPos(o.back_lat,o.back_lng)?'回来 '+mapUrl(o.back_lat,o.back_lng):''].filter(Boolean).join(' ');
+const outTxt=o=>(o.kind==='lunch'?'🍱 ':'')+klHM(o.out_at)+'-'+(o.back_at?klHM(o.back_at):'未回')+' '+o.reason+(o.kind==='lunch'&&o.back_at?'（'+lunchTxt(o.out_at,o.back_at)+'）':'');
+function outCell(r){
+  const L=(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date);
+  return L.map(o=>'<div class="'+(o.back_at?'':'red')+'" style="white-space:nowrap">'+esc(outTxt(o))+(isAdmin()?posLinks(o):'')+'</div>').join('')||'-';
+}
+const outPlain=r=>(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date).map(outTxt).join('; ');
+const outPos=r=>(H.outs||[]).filter(o=>o.user_id===r.user_id&&o.work_date===r.work_date).map(o=>klHM(o.out_at)+' '+(posPlain(o)||'无位置')).join('; ');
+function outOpen(){
+  openModal('<h3>🚶 外出</h3><label>外出理由（必填）</label><input id="outR" maxlength="200" placeholder="例如：买文具 / 去银行 / 送货"><div class="row" style="margin-bottom:10px">'+['买东西','银行','送货','见客户'].map(x=>'<button type="button" class="btn secondary" style="padding:6px 10px" onclick="$(\'outR\').value=\''+x+'\'">'+x+'</button>').join('')+'</div><p id="outS" class="muted">回来请点「回公司」；不回公司，点「外出后直接下班」。</p><div class="row"><button class="btn" onclick="outGo()">确认外出</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+}
+function outGo(){guard(async()=>{
+  const reason=($('outR').value||'').trim();
+  if(reason.length<2){$('outS').textContent='请写外出理由';return}
+  $('outS').textContent='正在定位…';
+  let pos;try{pos=await getPos(15000)}catch(e){$('outS').textContent='GPS 无法取得：'+geoMsg(e)+'。外出必须在公司范围内按。';return}
+  const {error}=await sb.rpc('hr_out_start',{p_reason:reason,p_lat:pos.coords.latitude,p_lng:pos.coords.longitude,p_accuracy:pos.coords.accuracy});
+  if(error){$('outS').textContent=hrErr(error.message);toast(hrErr(error.message));return}
+  closeModal();await loadHR();renderHR();toast('已外出，回来请点「回公司」');
+})}
+function backGo(){guard(async()=>{
+  toast('正在定位…');
+  let pos;try{pos=await getPos(15000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}   // 回公司必须有定位，并且要在公司范围内
+  const {error}=await sb.rpc('hr_out_back',{p_lat:pos.coords.latitude,p_lng:pos.coords.longitude,p_accuracy:pos.coords.accuracy});
+  if(error){toast(hrErr(error.message));return}
+  await loadHR();renderHR();toast('已回公司');
+})}
+/* ----- 拍照 + 定位 + 打卡 ----- */
+const camTitle={in:'上班打卡',out:'下班打卡',resume:'回来上班',outend:'外出后直接下班'};
+const hasPic=p=>!!p&&!/\/nophoto$/.test(p);
+async function camOpen(type){
+  camType=type;camPos=null;
+  const needCam=type==='in';   // 一天只拍一张照：只有每天第一次上班打卡要拍照
+  const hint=type==='resume'?'<p class="muted">不用拍照。系统会自动检查你是否在公司范围内。</p>':needCam?'':'<p class="muted">不用拍照，只记录定位。</p>';
+  openModal('<h3>'+camTitle[type]+'</h3>'+(needCam?'<video id="camV" autoplay playsinline muted style="width:100%;border-radius:10px;background:#000;transform:scaleX(-1)"></video>':'')+hint+'<p id="camS" class="muted">'+(needCam?'正在启动摄像头和定位…':'正在获取定位…')+'</p>'+(type==='out'&&earlyBy(H.today)>0?'<label>提早下班理由（必填）</label><textarea id="camR" placeholder="例如：去客户处送货" style="min-height:60px"></textarea>':'')+'<div class="row"><button id="camB" class="btn" disabled onclick="camShot()">'+(needCam?'📸 拍照并打卡':'✅ 确认打卡')+'</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+  if(needCam){
+    try{cam=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640}},audio:false})}
+    catch(e){if($('camS'))$('camS').textContent='打不开摄像头，请允许相机权限';return}
+    if(!$('camV')){stopCam();return}
+    $('camV').srcObject=cam;
+  }
+  try{camPos=await getPos(15000)}catch(e){if($('camS'))$('camS').textContent='GPS 无法取得：'+geoMsg(e);return}
+  if(!$('camS'))return;
+  $('camS').textContent='定位精度约 '+Math.round(camPos.coords.accuracy)+' 米，可以'+(needCam?'拍照打卡':'打卡');$('camB').disabled=false;
+}
+function camShot(){guard(async()=>{
+  const needCam=camType==='in';
+  const rsn=($('camR')?$('camR').value:'').trim();
+  if(camType==='out'&&$('camR')&&rsn.length<2){toast('提早下班请写理由');return}
+  let path=null;
+  if(needCam){
+    const v=$('camV'),c=document.createElement('canvas'),w=Math.min(640,v.videoWidth||640);
+    c.width=w;c.height=Math.round(w*(v.videoHeight||480)/(v.videoWidth||640));c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.7));
+    path=me.id+'/'+klDate(Date.now())+'-'+Date.now()+'-'+camType+'.jpg';
+    $('camS').textContent='上传中…';
+    const up=await sb.storage.from('clock-selfies').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw up.error;
+  }else $('camS').textContent='打卡中…';
+  const fn=({in:'hr_clock_in',out:'hr_clock_out',resume:'hr_clock_resume',outend:'hr_clock_out_away'})[camType];
+  const args=()=>({p_lat:camPos.coords.latitude,p_lng:camPos.coords.longitude,p_accuracy:camPos.coords.accuracy,p_selfie:path,...(camType==='out'?{p_reason:rsn||null}:{})});
+  let {error}=await sb.rpc(fn,args());
+  if(error&&!needCam&&/SELFIE_REQUIRED/.test(error.message||'')){   // 数据库还没升级成「免拍照」：先用占位路径兼容，不会卡住打卡
+    path=me.id+'/nophoto';
+    ({error}=await sb.rpc(fn,args()));
+  }
+  if(error){$('camS').textContent=hrErr(error.message);toast(hrErr(error.message));return}
+  closeModal();await loadHR();renderHR();toast(camType==='in'?'上班打卡成功':(camType==='out'||camType==='outend')?'下班打卡成功':'已回来上班');
+  if((camType==='out'||camType==='outend')&&H.today&&H.today.clock_out&&isSat(H.today.work_date)){   // 星期六：下班成功后才显示加班总数
+    const c=calc(H.today);
+    openModal('<h3>下班打卡成功</h3><p style="font-size:22px;font-weight:800;margin:10px 0">今天加班 '+(c.ot?hm(c.ot):'0 分钟')+'</p><button class="btn full" onclick="closeModal()">好</button>');
+  }
+})}
+async function selfie(p){const {data,error}=await sb.storage.from('clock-selfies').createSignedUrl(p,300);if(error){toast('无法读取照片');return}openModal('<img src="'+esc(data.signedUrl)+'" style="width:100%;border-radius:10px;margin-bottom:8px"><button class="btn full" onclick="closeModal()">关闭</button>')}
+/* ----- Admin：出勤记录 ----- */
+let recDay=klDate(Date.now());   // 出勤记录明细：只显示这一天（默认今天）
+function tabRec(){
+  const emps=D.profiles.filter(p=>p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(!fEmp||r.user_id===fEmp)),S={};
+  rs.forEach(r=>{const c=calc(r),u=S[r.user_id]=S[r.user_id]||{d:0,n:0,lm:0,ot:0,rest:0,miss:0};u.d++;if(c.late){u.n++;u.lm+=c.late}u.ot+=c.ot;u.rest+=c.rest;if(c.note==='忘记下班打卡')u.miss++});
+  const today=klDate(Date.now());
+  if(!recDay.startsWith(hrMonth))recDay=hrMonth===today.slice(0,7)?today:hrMonth+'-01';
+  const rows=rs.filter(r=>r.work_date===recDay).map(r=>{const c=calc(r);
+    return '<tr><td>'+r.work_date+'</td><td>'+esc(nameOf(r.user_id))+'</td><td>'+esc(r.sched_rule||'-')+'</td><td>'+klHM(r.clock_in)+'</td><td>'+klHM(r.clock_out)+'</td><td class="'+(c.late?'red':'')+'">'+hm(c.late)+'</td><td>'+hm(c.early)+'</td><td>'+hm(c.ot)+'</td><td>'+esc(noteOf(r,c))+'</td><td>'+outCell(r)+'</td><td>'+(r.in_distance_m!=null?Math.round(r.in_distance_m)+'m ':'')+mapLink(r.in_lat,r.in_lng)+'</td><td>'+(hasPic(r.in_selfie)?'<a href="#" onclick="selfie(\''+jsAttr(r.in_selfie)+'\');return false">上班</a> ':'')+(hasPic(r.out_selfie)?'<a href="#" onclick="selfie(\''+jsAttr(r.out_selfie)+'\');return false">下班</a>':'')+'</td></tr>'}).join('');
+  const sr=Object.keys(S).map(id=>{const u=S[id];return '<tr><td>'+esc(nameOf(id))+'</td><td>'+u.d+'</td><td>'+u.n+' 次 / '+hm(u.lm)+'</td><td>'+hm(u.ot)+'</td><td>'+hm(u.rest)+'</td><td>'+u.miss+'</td></tr>'}).join('');
+  return '<div class="card"><div class="row between">'+monthBar()+'<select style="width:auto;margin:0" onchange="fEmp=this.value;renderHR()"><option value="">全部员工</option>'+emps.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===fEmp?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></div></div>'+
+   '<div class="card"><h3>月度汇总</h3><div class="table"><table><tr><th>员工</th><th>出勤天数</th><th>迟到</th><th>OT</th><th>休息日工时</th><th>忘记下班</th></tr>'+(sr||'<tr><td colspan="6" class="muted">本月没有记录</td></tr>')+'</table></div><p class="muted">OT、迟到按「设置」里的当前规则计算；休息日工时单独列出，未计入 OT。星期六不看 Schedule，OT 从 14:00 起算（午休拖过 14:00 的时间不算），没有起算门槛，也不算休息日工时。</p></div>'+
+   '<div class="card"><div class="row between"><h3 style="margin:0">明细'+(recDay===today?'（今天）':'')+'</h3><input id="recDay" type="date" style="width:auto;margin:0" max="'+today+'" value="'+recDay+'" onchange="setRecDay(this.value)"></div><p class="muted" style="margin:6px 0">只显示这一天的记录，想看别的日期请改上面的日期。</p><div class="row" style="margin:0 0 8px"><button class="btn secondary" style="padding:6px 12px" onclick="exportRec()">⬇ 下载本月明细</button></div><div class="table"><table><tr><th>日期</th><th>员工</th><th>规则</th><th>上班</th><th>下班</th><th>迟到</th><th>早退</th><th>OT</th><th>备注</th><th>外出</th><th>位置</th><th>自拍</th></tr>'+(rows||'<tr><td colspan="12" class="muted">这一天没有记录</td></tr>')+'</table></div></div>';
+}
+const noteOf=(r,c)=>[c.note,lvDay(r.user_id,r.work_date),r.auto_out&&r.clock_out?'午休自动下班，未回来上班':'',r.out_reason?'提早下班：'+r.out_reason:''].filter(Boolean).join('；');
+const earlyBy=rc=>{if(!rc||!rc.sched_rule)return 0;const m=/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(rc.sched_rule);if(!m)return 0;const g=H.settings.early_grace_min;return +m[3]*60+ +m[4]-klMin(Date.now())-(g==null?2:g)};
+const canDl=()=>isAdmin()||me.can_att_download===true;
+function exportRec(mine){
+  if(mine&&!canDl()){toast('没有下载权限');return}
+  const rs=H.records.filter(r=>r.work_date.startsWith(hrMonth)&&(mine?r.user_id===me.id:(!fEmp||r.user_id===fEmp))).slice().sort((a,b)=>a.work_date.localeCompare(b.work_date)||nameOf(a.user_id).localeCompare(nameOf(b.user_id)));
+  if(!rs.length){toast('本月没有记录可导出');return}
+  const header=['日期','员工','规则','上班','下班','迟到(分钟)','早退(分钟)','OT(分钟)','休息日工时(分钟)','备注','外出','外出位置（地图链接）','上班距离(m)','上班GPS'];
+  const rows=rs.map(r=>{const c=calc(r);return [r.work_date,nameOf(r.user_id),r.sched_rule||'',klHM(r.clock_in),klHM(r.clock_out),c.late||0,c.early||0,c.ot||0,c.rest||0,noteOf(r,c),outPlain(r),outPos(r),r.in_distance_m!=null?Math.round(r.in_distance_m):'',gpsText(r.in_lat,r.in_lng)]});
+  dlCSV('AKAIDO-出勤明细-'+hrMonth+(mine?'-'+nameOf(me.id):(fEmp?'-'+nameOf(fEmp):''))+'.csv',header,rows);
+  toast('已导出 '+rs.length+' 条记录');
+}
+/* ----- Admin：员工 ----- */
+const schOpts=sel=>'<option value="">（未设置）</option>'+H.schedules.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===sel?' selected':'')+'>'+esc(s.name)+'</option>').join('');
+function tabEmp(){return tabEmp0()+devCard()}
+function tabEmp0(){
+  const rows=D.profiles.slice().sort((a,b)=>a.username.localeCompare(b.username)).map(p=>'<tr'+(p.active?'':' style="opacity:.55"')+'><td>'+esc(p.name)+'</td><td>'+esc(p.username)+'</td><td>'+esc(p.role)+'</td><td><a href="#" onclick="setDept(\''+esc(p.id)+'\',\''+jsAttr(p.dept||'')+'\');return false">'+esc(p.dept||'设置')+'</a></td><td><select onchange="setProf(\''+esc(p.id)+'\',{schedule_id:this.value||null})">'+schOpts(p.schedule_id)+'</select></td><td><input type="checkbox" style="width:auto;margin:0" '+(p.track_attendance!==false?'checked':'')+' onchange="setProf(\''+esc(p.id)+'\',{track_attendance:this.checked})"></td><td>'+(p.id===me.id||(p.role==='admin'&&!isSuper())?'':'<button class="btn secondary" style="padding:6px 10px" onclick="if(confirm(\''+(p.active?'停用':'启用')+'这个账号？'+'\'))setProf(\''+esc(p.id)+'\',{active:'+!p.active+'})">'+(p.active?'停用':'启用')+'</button>'+(p.role==='staff'?' <button class="btn danger" style="padding:6px 10px;margin-left:6px" onclick="delStaff(\''+esc(p.id)+'\',\''+jsAttr(p.name)+'\')">删除</button>':''))+'</td></tr>').join('');
+  return '<div class="card"><h3>员工（含 Sales / Admin）</h3><div class="table"><table><tr><th>姓名</th><th>账号</th><th>角色</th><th>部门</th><th>Schedule</th><th>考勤</th><th></th></tr>'+rows+'</table></div><p class="muted">「考勤」打勾才需要打卡。停用后无法登录，历史记录保留。</p></div>'+
+   '<div class="card"><h3>新增员工账号</h3><label>账号名</label><input id="ne_u" autocapitalize="none" autocorrect="off"><label>姓名</label><input id="ne_n"><label>角色</label><select id="ne_r"><option value="staff">Staff（仓库 / 办公室）</option><option value="sales">Sales</option>'+(isSuper()?'<option value="admin">Admin</option>':'')+'</select><label>部门</label><input id="ne_d" placeholder="Warehouse / Office"><label>Schedule</label><select id="ne_s">'+schOpts('')+'</select><label>初始密码（至少 8 位）</label><input id="ne_p" type="password"><button class="btn full" onclick="newEmp()">创建账号</button></div>';
+}
+async function delStaff(id,name){
+  if(!isAdmin())return;
+  if(!confirm('永久删除 Staff「'+name+'」？\n\n这个账号和他的全部打卡、外出记录会一起删除，无法恢复。\n（只想让他不能登录的话，请用「停用」）'))return;
+  await guard(async()=>{
+    const {error}=await sb.rpc('admin_delete_staff',{p_id:id});
+    if(error){
+      const m=error.message||'';
+      throw new Error(/HAS_CUSTOMERS/.test(m)?'此 Staff 名下还有客户，请先到后台「全部客户与负责人」重新分配给其他人':/ONLY_STAFF/.test(m)?'只能删除 Staff 账号':/CANNOT_DELETE_SELF/.test(m)?'不能删除自己':/Could not find the function/.test(m)?'删除功能还没启用，请先运行 staff-outing-delete.sql':m);
+    }
+    await loadAll();page(cur);toast('已删除');
+  });
+}
+/* ========== 请假 On Leave ========== */
+let LV=[];
+const dmy=d=>{const a=String(d).split('-');return +a[2]+'/'+ +a[1]+'/'+a[0]};
+async function loadLv(){try{const r=await sb.from('hr_leaves').select('*').order('start_date',{ascending:false}).limit(300);LV=r.error?[]:(r.data||[])}catch(e){LV=[]}}
+const leaveErr=m=>{m=String(m||'');return /p_half/.test(m)?'半天假功能还没启用，请联系管理员':/LEAVE_HALF_SHORT_DAY/.test(m)?'这天本来就是半天班，请选「全天」':/LEAVE_OVERLAP/.test(m)?'这个日期或时段已经有请假记录':/LEAVE_NO_BALANCE/.test(m)?'有薪假期余额不足':/SICK_NO_BALANCE/.test(m)?'病假次数已用完，请改选无薪假期':/LEAVE_EXPIRED/.test(m)?'这个假期已过到期日，这段日期不能使用，请改选无薪假期':/LEAVE_BAD_DATES/.test(m)?'日期不正确':/LEAVE_TOO_LONG/.test(m)?'一次最多请 60 天':/LEAVE_NO_WORKDAY/.test(m)?'这段日期都是休息日，不需要请假':/LEAVE_STARTED/.test(m)?'已经开始的假期不能取消，请联系管理员':/ACCOUNT_NOT_ALLOWED/.test(m)?'此账号不能请假':'请假失败：'+m};
+const lvKind=l=>({paid:'有薪 · 不扣薪',sick:'病假 · 不扣薪',unpaid:'无薪 · 扣薪'}[l.kind]||l.kind);
+const lvHalf=l=>l.half==='am'?'上午':l.half==='pm'?'下午':'';
+const lvHalves=(uid,d)=>{const h={am:false,pm:false};(LV||[]).forEach(l=>{if(l.user_id===uid&&l.status==='approved'&&l.half&&l.start_date===d)h[l.half]=true});return h};
+const lvDay=(uid,d)=>{const h=lvHalves(uid,d);return (h.am?'上午请假':'')+(h.am&&h.pm?'、':'')+(h.pm?'下午请假':'')};
+const todayRule=(s,t)=>{const r=ruleOf(s,t),hv=lvHalves(me.id,t);if(!r||!/^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(r)||(!hv.am&&!hv.pm))return r;if(hv.am&&hv.pm)return '请假（全天）';const ls=String(H.settings.lunch_start||'13:00').slice(0,5),le=String(H.settings.lunch_end||'14:00').slice(0,5);return (hv.am?le+'-'+r.split('-')[1]:r.split('-')[0]+'-'+ls)+'（'+(hv.am?'上午':'下午')+'请假）'};
+const lvStat=l=>({approved:'已登记',rejected:'已被驳回',cancelled:'已取消'}[l.status]||l.status);
+function leaveCard(){
+  if(me.track_attendance===false)return '';
+  const td=klDate(Date.now()),rows=LV.filter(l=>l.user_id===me.id).slice(0,8).map(l=>'<div class="item"><b>'+dmy(l.start_date)+(l.half?'（'+lvHalf(l)+'）':'')+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</b> · '+l.days+' 天 · '+lvKind(l)+' · '+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+(l.kind==='sick'?(l.mc_path?' · <a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">MC</a>':' · <a href="#" onclick="leaveMcForm(\''+esc(l.id)+'\');return false">补传 MC</a>'):'')+' · '+lvStat(l)+(l.status==='approved'&&l.start_date>td?' <a href="#" onclick="leaveCancel(\''+esc(l.id)+'\');return false">取消</a>':'')+'</div>').join('');
+  return '<div class="card"><div class="row between"><h3 style="margin:0">🌴 请假 On Leave</h3><button class="btn" onclick="leaveForm()">＋ 请假</button></div><p class="muted" style="margin:8px 0 0">有薪假期余额：<b>'+(me.leave_balance||0)+' 天</b> · 病假余额：<b>'+(me.sick_balance==null?0:me.sick_balance)+' 次</b>'+(me.leave_expiry?' · 到期日 '+dmy(me.leave_expiry):'')+'</p>'+(rows||'<p class="muted">还没有请假记录</p>')+'</div>';
+}
+function leaveForm(){
+  const t=klDate(Date.now()),ex=me.leave_expiry?'，到期 '+dmy(me.leave_expiry):'';
+  openModal('<h3>请假 On Leave</h3><label>类型</label><select id="lv_k" onchange="lvKindChg()"><option value="paid">有薪假期（余额 '+(me.leave_balance||0)+' 天'+ex+'）</option><option value="sick">病假（余额 '+(me.sick_balance==null?0:me.sick_balance)+' 次'+ex+'）</option><option value="unpaid">无薪假期</option></select><label>时长</label><select id="lv_h" onchange="lvHalfChg()"><option value="">全天（可选多天）</option><option value="am">上午（半天，扣 0.5 天）</option><option value="pm">下午（半天，扣 0.5 天）</option></select><label id="lv_sl">从</label><input id="lv_s" type="date" value="'+t+'" onchange="lvSync()"><div id="lv_ew"><label>到</label><input id="lv_e" type="date" value="'+t+'"></div><p id="lv_hn" class="muted hidden" style="margin:0 0 8px">病假请半天，也扣 1 次病假。</p><div id="lv_rw"><label>原因</label><select id="lv_r">'+['旅行','婚礼','白事','其它'].map(x=>'<option>'+x+'</option>').join('')+'</select></div><div id="lv_mw" class="hidden"><label>医生证明 MC（照片或 PDF，可以稍后补传）</label><input id="lv_m" type="file" accept="image/*,application/pdf"></div><label>备注（选填；原因选「其它」请写清楚）</label><input id="lv_n"><div class="row"><button class="btn" onclick="leaveSubmit()">提交</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+}
+const lvKindChg=()=>{const k=$('lv_k').value;$('lv_rw').classList.toggle('hidden',k==='sick');$('lv_mw').classList.toggle('hidden',k!=='sick');lvHalfChg()};
+const lvHalfChg=()=>{const h=$('lv_h').value;$('lv_ew').classList.toggle('hidden',!!h);$('lv_sl').textContent=h?'日期':'从';if(h)$('lv_e').value=$('lv_s').value;$('lv_hn').classList.toggle('hidden',!(h&&$('lv_k').value==='sick'))};
+const lvSync=()=>{if($('lv_h').value)$('lv_e').value=$('lv_s').value};   // 半天假只有一天
+async function mcUpload(file){
+  if(!file)return null;
+  if(!/^(image\/|application\/pdf)/.test(file.type||''))throw new Error('MC 只能是照片或 PDF');
+  if(file.size>8*1024*1024)throw new Error('文件不能超过 8MB');
+  const ext=((file.name||'').split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg',path=me.id+'/'+Date.now()+'.'+ext;
+  const up=await sb.storage.from('leave-mc').upload(path,file,{contentType:file.type});if(up.error)throw up.error;return path;
+}
+async function leaveSubmit(){
+  const k=$('lv_k').value,h=$('lv_h').value,a=$('lv_s').value,b=h?a:$('lv_e').value,r=k==='sick'?'病假':$('lv_r').value,n=$('lv_n').value.trim();
+  if(!a||!b||b<a){toast('请选择正确的日期');return}
+  if(r==='其它'&&n.length<2){toast('原因选「其它」，请在备注写清楚');return}
+  await guard(async()=>{
+    const mc=k==='sick'?await mcUpload($('lv_m').files[0]):null;
+    const args={p_kind:k,p_start:a,p_end:b,p_reason:r,p_note:n||null,p_mc:mc};if(h)args.p_half=h;   // 只有请半天才带这个参数，全天请假完全不受影响
+    const {error}=await sb.rpc('hr_leave_apply',args);
+    if(error){toast(leaveErr(error.message));return}
+    closeModal();await loadAll();renderHR();toast('请假已登记');
+  });
+}
+function leaveMcForm(id){openModal('<h3>补传医生证明 MC</h3><input id="mc_f" type="file" accept="image/*,application/pdf"><div class="row"><button class="btn" onclick="leaveMcSave(\''+esc(id)+'\')">上传</button><button class="btn secondary" onclick="closeModal()">取消</button></div>')}
+async function leaveMcSave(id){const f=$('mc_f').files[0];if(!f){toast('请先选择文件');return}await guard(async()=>{const path=await mcUpload(f);const {error}=await sb.rpc('hr_leave_set_mc',{p_id:id,p_path:path});if(error){toast(leaveErr(error.message));return}closeModal();await loadHR();renderHR();toast('MC 已上传')})}
+async function mcView(p){const {data,error}=await sb.storage.from('leave-mc').createSignedUrl(p,300);if(error){toast('无法读取 MC');return}openModal((/\.pdf$/i.test(p)?'<a class="btn full" target="_blank" rel="noopener" href="'+esc(data.signedUrl)+'">打开 PDF</a>':'<img src="'+esc(data.signedUrl)+'" style="width:100%;border-radius:10px;margin-bottom:8px">')+'<button class="btn full secondary" style="margin-top:8px" onclick="closeModal()">关闭</button>')}
+async function leaveCancel(id){
+  if(!confirm(isAdmin()?'驳回这条请假？有薪的天数会退还给员工。':'取消这条请假？有薪的天数会退还。'))return;
+  await guard(async()=>{const {error}=await sb.rpc('hr_leave_cancel',{p_id:id});if(error){toast(leaveErr(error.message));return}await loadAll();Object.assign(me,D.profiles.find(p=>p.id===me.id)||{});renderHR();toast('已处理')});
+}
+/* Admin：请假 */
+function leaveCsv(scope){
+  const y=hrMonth.slice(0,4),kn={paid:'有薪假期',sick:'病假',unpaid:'无薪假期'},sn={approved:'已登记',rejected:'已驳回',cancelled:'已取消'};
+  const list=LV.filter(l=>scope==='year'?(l.start_date.slice(0,4)===y||l.end_date.slice(0,4)===y):(l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth)).slice().sort((a,b)=>a.start_date.localeCompare(b.start_date));
+  if(!list.length){toast('这段时间没有请假记录');return}
+  dlCSV('AKAIDO-请假报告-'+(scope==='year'?y:hrMonth)+'.csv',['员工','类型','开始日期','结束日期','时段','天数','时段','原因','备注','状态','MC','是否扣薪','登记时间'],list.map(l=>[nameOf(l.user_id),kn[l.kind]||l.kind,l.start_date,l.end_date,lvHalf(l)||'全天',l.days,lvHalf(l)||'全天',l.reason,l.note||'',sn[l.status]||l.status,l.kind==='sick'?(l.mc_path?'已上传':'未上传'):'',l.kind==='unpaid'?'扣薪':'不扣薪',fmt(l.created_at)]));
+}
+function leaveBalCsv(){
+  const y=hrMonth.slice(0,4),emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  const used=(id,k)=>LV.filter(l=>l.user_id===id&&l.kind===k&&l.status==='approved'&&l.start_date.slice(0,4)===y);
+  const sum=a=>a.reduce((t,l)=>t+Number(l.days||0),0);
+  dlCSV('AKAIDO-请假余额汇总-'+y+'.csv',['员工','部门','有薪余额(天)','病假余额(次)','到期日(共用)',y+'年已用有薪(天)',y+'年已用病假(次)',y+'年无薪(天)'],emps.map(p=>[p.name,p.dept||'',p.leave_balance==null?0:p.leave_balance,p.sick_balance==null?0:p.sick_balance,p.leave_expiry?dmy(p.leave_expiry):'',sum(used(p.id,'paid')),used(p.id,'sick').length,sum(used(p.id,'unpaid'))]));
+}
+
+function tabLeave(){
+  const emps=D.profiles.filter(p=>p.active&&p.track_attendance!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  const inp=(p,k,t)=>'<input type="'+t+'" '+(t==='number'?'min="0" step="'+(k==='sick_balance'?'1':'0.5')+'"':'')+' style="margin:0;padding:6px;width:'+(t==='date'?'150px':'80px')+'" value="'+esc(p[k]==null?'':p[k])+'" onchange="setProf(\''+esc(p.id)+'\',{'+k+':'+(t==='number'?'Math.max(0,'+(k==='sick_balance'?'Math.round(parseFloat(this.value)||0)':'parseFloat(this.value)||0')+')':'this.value||null')+'})">';
+  const r1=emps.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+inp(p,'leave_balance','number')+'</td><td>'+inp(p,'sick_balance','number')+'</td><td>'+inp(p,'leave_expiry','date')+'</td></tr>').join('');
+  const r2=LV.filter(l=>l.start_date.slice(0,7)<=hrMonth&&l.end_date.slice(0,7)>=hrMonth).map(l=>'<tr><td>'+esc(nameOf(l.user_id))+'</td><td>'+dmy(l.start_date)+(l.half?'（'+lvHalf(l)+'）':'')+(l.end_date!==l.start_date?' - '+dmy(l.end_date):'')+'</td><td>'+l.days+'</td><td>'+lvKind(l)+'</td><td>'+esc(l.reason)+(l.note?'（'+esc(l.note)+'）':'')+'</td><td>'+(l.kind==='sick'?(l.mc_path?'<a href="#" onclick="mcView(\''+jsAttr(l.mc_path)+'\');return false">查看</a>':'<span class="red">未上传</span>'):'')+'</td><td>'+lvStat(l)+'</td><td>'+(l.status==='approved'?'<button class="btn danger" style="padding:6px 10px" onclick="leaveCancel(\''+esc(l.id)+'\')">驳回</button>':'')+'</td></tr>').join('');
+  return '<div class="card"><h3>员工有薪假期设置</h3><div class="table"><table><tr><th>员工</th><th>有薪余额（天）</th><th>病假余额（次）</th><th>到期日（共用）</th></tr>'+(r1||'<tr><td colspan="4" class="muted">没有员工</td></tr>')+'</table></div><p class="muted">每个员工的天数、次数和到期日可以不一样，改完自动保存。有薪假期和病假共用同一个到期日；病假按次数计，每提交一次用掉 1 次。</p></div>'+
+   '<div class="card"><div class="row between"><h3 style="margin:0">请假记录</h3>'+monthBar()+'</div><div class="row" style="margin:8px 0"><button class="btn secondary" onclick="leaveCsv(\'month\')">⬇ 下载本月报告</button><button class="btn secondary" onclick="leaveCsv(\'year\')">⬇ 下载全年报告</button><button class="btn secondary" onclick="leaveBalCsv()">⬇ 下载余额汇总</button></div><div class="table"><table><tr><th>员工</th><th>日期</th><th>天数</th><th>类型</th><th>原因</th><th>MC</th><th>状态</th><th></th></tr>'+(r2||'<tr><td colspan="8" class="muted">这个月没有请假记录</td></tr>')+'</table></div></div>';
+}
+
+async function setProf(id,patch){await guard(async()=>{const r=await sb.from('profiles').update(patch).eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已保存')})}
+async function setDept(id,cur){const v=prompt('部门',cur);if(v===null)return;await setProf(id,{dept:v.trim()||null})}
+async function newEmp(){
+  const g=i=>$(i).value.trim(),body={username:g('ne_u').toLowerCase(),name:g('ne_n'),role:$('ne_r').value,dept:g('ne_d'),schedule_id:$('ne_s').value,password:$('ne_p').value};
+  if(!/^[a-z0-9_]{3,20}$/.test(body.username)){toast('账号名：3-20 位小写字母、数字或下划线');return}
+  if(!body.name){toast('请填写姓名');return}
+  if(body.password.length<8){toast('密码至少 8 位');return}
+  if(body.role==='admin'&&!isSuper()){toast('只有主 Admin（账号 admin）可以新增 Admin');return}
+  await guard(async()=>{const {data,error}=await sb.functions.invoke('admin-create-user',{body});if(error)throw error;if(!data||!data.ok){toast((data&&data.error)||'创建失败');return}await loadAll();renderHR();toast(data.warning?'账号已创建，但 '+data.warning:'账号已创建：'+body.username)});
+}
+/* ----- Admin：Schedule ----- */
+function tabSch(){
+  const rows=H.schedules.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.weekday)+'</td><td>'+esc(s.sat)+'</td><td>'+esc(s.sun)+'</td><td><button class="btn secondary" style="padding:6px 10px" onclick="schForm(\''+esc(s.id)+'\')">编辑</button> <button class="btn danger" style="padding:6px 10px" onclick="schDel(\''+esc(s.id)+'\')">删除</button></td></tr>').join('');
+  return '<div class="card"><div class="row between"><h3 style="margin:0">工作时间 Schedule</h3><button class="btn" onclick="schForm(\'\')">＋ 新增</button></div><div class="table"><table><tr><th>名称</th><th>周一至五</th><th>星期六</th><th>星期日</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有 Schedule</td></tr>')+'</table></div><p class="muted">已打的卡会保存当天的规则，之后修改 Schedule 不会影响旧记录。</p></div>';
+}
+function schForm(id){
+  const s=H.schedules.find(x=>x.id===id)||{name:'',weekday:'09:00-18:00',sat:'OFF',sun:'OFF'};
+  openModal('<h3>'+(id?'编辑':'新增')+' Schedule</h3><label>名称</label><input id="sc_n" value="'+esc(s.name)+'"><label>周一至五（08:30-18:00 或 OFF）</label><input id="sc_w" value="'+esc(s.weekday)+'"><label>星期六</label><input id="sc_s" value="'+esc(s.sat)+'"><label>星期日</label><input id="sc_u" value="'+esc(s.sun)+'"><div class="row"><button class="btn" onclick="schSave(\''+esc(id)+'\')">保存</button><button class="btn secondary" onclick="closeModal()">取消</button></div>');
+}
+async function schSave(id){
+  const row={name:$('sc_n').value.trim(),weekday:$('sc_w').value.trim().toUpperCase(),sat:$('sc_s').value.trim().toUpperCase(),sun:$('sc_u').value.trim().toUpperCase()};
+  if(!row.name){toast('请填写名称');return}
+  if(![row.weekday,row.sat,row.sun].every(okRule)){toast('格式：08:30-18:00 或 OFF');return}
+  await guard(async()=>{const r=id?await sb.from('hr_schedules').update(row).eq('id',id):await sb.from('hr_schedules').insert(row);if(r.error)throw r.error;closeModal();await loadAll();renderHR();toast('已保存')});
+}
+async function schDel(id){if(!confirm('确定删除？使用它的员工会变成「未设置」，已有记录不变。'))return;await guard(async()=>{const r=await sb.from('hr_schedules').delete().eq('id',id);if(r.error)throw r.error;await loadAll();renderHR();toast('已删除')})}
+/* ----- Admin：地点与设置 ----- */
+function tabSet(){
+  const s=H.settings;
+  const rows=H.locations.map(l=>'<tr><td>'+esc(l.name)+'</td><td>'+gpsText(l.lat,l.lng)+'</td><td><input type="number" min="10" style="width:72px;margin:0;padding:6px" value="'+l.radius_m+'" onchange="lcSet(\''+esc(l.id)+'\',{radius_m:Math.max(10,parseInt(this.value,10)||150)})">m</td><td><input type="checkbox" style="width:auto;margin:0" '+(l.active?'checked':'')+' onchange="lcSet(\''+esc(l.id)+'\',{active:this.checked})"></td><td><button class="btn danger" style="padding:6px 10px" onclick="lcDel(\''+esc(l.id)+'\')">删除</button></td></tr>').join('');
+  return '<div class="card"><h3>OT 与迟到设置</h3><label>OT 起算门槛（分钟，星期六不适用）：下班后超过这个分钟数才有 OT；有 OT 时从下班时间开始算，精确到每一分钟</label><input id="st_g" type="number" min="0" value="'+s.ot_grace_min+'"><label>迟到宽限（分钟）</label><input id="st_l" type="number" min="0" value="'+s.late_grace_min+'"><label>提早下班免写理由的宽限（分钟）：比下班时间早不超过这个分钟数，不用写理由</label><input id="st_e" type="number" min="0" value="'+(s.early_grace_min==null?2:s.early_grace_min)+'"><label><input type="checkbox" id="st_f" style="width:auto;margin:0 6px 0 0" '+(s.enforce_geofence?'checked':'')+'>强制 GPS 围栏（范围外不能打卡）</label><button class="btn full" onclick="setSave()">保存设置</button></div>'+
+   '<div class="card"><h3>打卡地点</h3><div class="table"><table><tr><th>名称</th><th>坐标</th><th>半径</th><th>启用</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有地点，目前不检查 GPS 围栏</td></tr>')+'</table></div><label>名称</label><input id="lc_n" placeholder="AKAIDO Office"><div class="row"><div style="flex:1"><label>纬度</label><input id="lc_a" inputmode="decimal"></div><div style="flex:1"><label>经度</label><input id="lc_o" inputmode="decimal"></div></div><label>半径（米，建议 100–200）</label><input id="lc_r" type="number" value="150"><div class="row"><button class="btn secondary" onclick="lcHere()">📍 用我现在的位置</button><button class="btn" onclick="lcAdd()">新增地点</button></div><p class="muted">人站在公司里点「用我现在的位置」最准确。</p></div>';
+}
+async function setSave(){await guard(async()=>{
+  const base={ot_grace_min:Math.max(0,+$('st_g').value||0),late_grace_min:Math.max(0,+$('st_l').value||0),early_grace_min:Math.max(0,+$('st_e').value||0),enforce_geofence:$('st_f').checked};
+  const r=await sb.from('hr_settings').update(base).eq('id',1);
+  if(r.error)throw r.error;
+  await loadHR();renderHR();toast('设置已保存');
+})}
+async function lcHere(){await guard(async()=>{toast('正在获取 GPS…');let p;try{p=await getPos(15000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}$('lc_a').value=p.coords.latitude.toFixed(6);$('lc_o').value=p.coords.longitude.toFixed(6);toast('已填入，精度约 '+Math.round(p.coords.accuracy)+' 米')})}
+async function lcAdd(){
+  const row={name:$('lc_n').value.trim(),lat:parseFloat($('lc_a').value),lng:parseFloat($('lc_o').value),radius_m:parseInt($('lc_r').value,10)||150};
+  if(!row.name||isNaN(row.lat)||isNaN(row.lng)){toast('请填写名称和坐标');return}
+  await guard(async()=>{const r=await sb.from('hr_locations').insert(row);if(r.error)throw r.error;await loadHR();renderHR();toast('地点已新增')});
+}
+async function lcSet(id,patch){await guard(async()=>{const r=await sb.from('hr_locations').update(patch).eq('id',id);if(r.error)throw r.error;await loadHR();renderHR()})}
+async function lcDel(id){if(!confirm('确定删除这个地点？'))return;await guard(async()=>{const r=await sb.from('hr_locations').delete().eq('id',id);if(r.error)throw r.error;await loadHR();renderHR()})}
+
+/* ========== 设备绑定（一人一机，Admin 批准） ========== */
+let DV=[],_mt='';
+function devTok(){let t='';try{t=localStorage.getItem('akaido_dev')||''}catch(e){}if(t.length<32){t=Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,'0')).join('');try{localStorage.setItem('akaido_dev',t)}catch(e){_mt=_mt||t;t=_mt}}return t}
+function devLabel(){const u=navigator.userAgent,os=(/iPhone|iPad|Android [\d.]+(?:; [^)]+)?|Windows NT [\d.]+|Mac OS X [\d_]+|Linux/.exec(u)||['?'])[0],br=/Edg\//.test(u)?'Edge':/Firefox\//.test(u)?'Firefox':/Chrome\/|CriOS/.test(u)?'Chrome':/Safari\//.test(u)?'Safari':'?';return (os+' · '+br).replace(/_/g,'.')}
+async function regDevice(){me.devState='unknown';try{const {data,error}=await sb.rpc('hr_device_register',{p_label:devLabel()});if(!error&&data)me.devState=data}catch(e){}}
+async function recheckDev(){await guard(async()=>{await regDevice();renderHR();toast(me.devState==='approved'?'已批准，可以打卡':'还在等待批准')})}
+async function loadDev(){try{const r=await sb.from('hr_devices').select('*').order('requested_at',{ascending:false});DV=r.error?[]:(r.data||[])}catch(e){DV=[]}}
+function devCard(){
+  const pend=DV.filter(d=>d.status==='pending').length;
+  const rows=DV.map(d=>{const b=DV.find(x=>x.status==='approved'&&x.token_hash===d.token_hash&&x.user_id!==d.user_id);
+    return '<tr><td>'+esc(nameOf(d.user_id))+'</td><td>'+esc(d.label||'-')+(b?'<br><span class="red">⚠ 这部手机已绑定给 '+esc(nameOf(b.user_id))+'</span>':'')+'</td><td>'+({pending:'<b class="red">待批准</b>',approved:'✅ 已绑定',revoked:'已取消'}[d.status]||esc(d.status))+'</td><td>'+(d.last_used?fmt(d.last_used):'-')+'</td><td>'+(d.status==='approved'?'':'<button class="btn" style="padding:6px 10px" onclick="devApprove(\''+esc(d.id)+'\')">批准</button> ')+'<button class="btn danger" style="padding:6px 10px" onclick="devDel(\''+esc(d.id)+'\')">'+(d.status==='approved'?'解除':'删除')+'</button></td></tr>'}).join('');
+  return '<div class="card"><h3>📱 设备管理'+(pend?' <span class="badge" style="background:#fde8e8;color:#b42318">'+pend+' 个待批准</span>':'')+'</h3><div class="table"><table><tr><th>员工</th><th>设备</th><th>状态</th><th>最后使用</th><th></th></tr>'+(rows||'<tr><td colspan="5" class="muted">还没有设备登记</td></tr>')+'</table></div><p class="muted">员工登录后会自动提交申请，批准后才能打卡。每人只能绑定一部手机，换手机请员工用新手机登录，这里批准新的，旧的自动取消。「解除」后，他的手机会重新变成待批准。</p></div>';
+}
+async function devApprove(id){await guard(async()=>{const {error}=await sb.rpc('hr_device_approve',{p_id:id});if(error){const m=error.message||'';toast(/DEVICE_BOUND_TO_OTHER/.test(m)?'这部手机已绑定给：'+m.replace(/^.*DEVICE_BOUND_TO_OTHER:\s*/,''):'操作失败：'+m);return}await loadDev();renderHR();toast('已批准')})}
+async function devDel(id){if(!confirm('确定取消绑定？此手机需重新申请。'))return;await guard(async()=>{const r=await sb.from('hr_devices').delete().eq('id',id);if(r.error)throw r.error;await loadDev();renderHR();toast('已处理')})}
+
+/* ========== 启动 ========== */
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+(async function init(){
+  ['lu','lp'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()}));
+  if(!window.supabase){loginMsg('无法加载网络组件，请检查网络后刷新页面');return}
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{'x-device-token':devTok()}}});
+  sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&me){me=null;location.reload()}});
+  try{
+    const {data}=await sb.auth.getSession();
+    if(data&&data.session)await enter(data.session.user);
+  }catch(e){console.error(e);loginMsg('自动登录失败，请重新登录')}
+})();
+</script>
+</body>
+</html>
