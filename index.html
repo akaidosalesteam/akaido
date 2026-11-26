@@ -342,9 +342,9 @@ function renderCheckin(){
   const custs=(isAdmin()?D.customers:D.customers.filter(c=>c.owner_id===me.id)).slice().sort((a,b)=>a.name.localeCompare(b.name));
   const custOpts='<option value="">请选择客户…</option>'+custs.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
   $('checkin').innerHTML='<h2>📍 外勤打卡</h2><div class="card">'+
-    '<label>这次打卡是去拜访哪位客户？（必选）</label><select id="ckCust">'+custOpts+'</select>'+(custs.length?'':'<p class="red" style="margin:0 0 8px">你还没有客户，请先到「客户」页新增客户，才能打卡。</p>')+
-    '<div class="row"><button class="btn" onclick="attend(\'IN\')">📍 CHECK IN</button><button class="btn secondary" onclick="attend(\'OUT\')">🏁 CHECK OUT</button></div>'+
-    '<p class="muted">今日状态：'+(D.attendance.some(a=>a.user_id===me.id&&a.type==='IN'&&isToday(a.created_at))?'已 Check In':'尚未 Check In')+'。打卡会记录 GPS 位置，请在弹出的提示里选择「允许」。</p></div>'+
+    '<label>这次打卡是去拜访哪位客户？（必选）</label><input id="ckQ" placeholder="🔍 搜索客户名称、联系人、电话" oninput="ckFilter()" autocomplete="off"><select id="ckCust">'+custOpts+'</select>'+(custs.length?'':'<p class="red" style="margin:0 0 8px">你还没有客户，请先到「客户」页新增客户，才能打卡。</p>')+
+    '<div class="row"><button class="btn" '+(ckOpenIn()?'disabled ':'')+'onclick="attend(\'IN\')">📍 CHECK IN</button><button class="btn secondary" onclick="attend(\'OUT\')">🏁 CHECK OUT</button></div>'+
+    '<p class="muted">今日状态：'+(ckOpenIn()?'已 Check In（'+ftime(ckOpenIn().created_at)+'），请先 Check Out，才能再次 Check In':D.attendance.some(a=>a.user_id===me.id&&a.type==='IN'&&isToday(a.created_at))?'已 Check Out，可以再次 Check In':'尚未 Check In')+'。打卡会记录 GPS 位置，请在弹出的提示里选择「允许」。</p></div>'+
     '<div class="card">'+(isAdmin()?'<div class="row" style="flex-wrap:nowrap;gap:8px"><select id="ckSales" style="flex:1;min-width:0;margin:0" onchange="filterCheckinSales()">'+salesOpts(ckSales)+'</select><input id="ckDate" type="date" style="width:auto;flex:none;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div>':'<div class="row between"><h3 style="margin:0">查看日期</h3><input id="ckDate" type="date" style="width:auto;margin:0" max="'+ymd()+'" value="'+ckDate+'" onchange="filterCheckin()"></div>')+'</div>'+
     '<div id="ckBody"></div>'+
     '<div class="card"><h3>导出打卡记录</h3>'+(isAdmin()?'<label>选择 Sales</label><select id="exSales">'+salesOpts(ckSales)+'</select>':'')+'<div class="row"><input id="exFrom" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd(new Date(Date.now()-6*86400000))+'"><span class="muted">至</span><input id="exTo" type="date" style="width:auto" max="'+ymd()+'" value="'+ymd()+'"></div><button class="btn secondary full" onclick="exportAttendance()">⬇ 下载这段日期的打卡记录（CSV）</button><p class="muted">可用 Excel 打开。'+(isAdmin()?'不选 Sales 就导出全部。':'只导出我自己的记录。')+'</p></div>';
@@ -380,16 +380,25 @@ function renderCheckinBody(){
   }
   $('ckBody').innerHTML=h;
 }
+const ckCusts=()=>(isAdmin()?D.customers:D.customers.filter(c=>c.owner_id===me.id)).slice().sort((a,b)=>a.name.localeCompare(b.name));
+function ckFilter(){
+  const q=$('ckQ').value.trim().toLowerCase(),sel=$('ckCust'),cur=sel.value;
+  const list=ckCusts().filter(c=>!q||[c.name,c.contact,c.phone,c.office_no].join(' ').toLowerCase().includes(q));
+  sel.innerHTML='<option value="">'+(q?(list.length?'请选择客户…（'+list.length+' 个符合）':'没有符合的客户'):'请选择客户…')+'</option>'+list.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  if(q&&list.length===1)sel.value=list[0].id;   // 只剩一个就直接选好
+}
+const ckOpenIn=()=>{const m=D.attendance.filter(a=>a.user_id===me.id&&isToday(a.created_at)).sort((a,b)=>a.created_at.localeCompare(b.created_at));const l=m[m.length-1];return l&&l.type==='IN'?l:null};
 async function attend(type){
   await guard(async()=>{
     const custEl=$('ckCust');
     const custId=custEl&&custEl.value?custEl.value:null;
+    if(type==='IN'){const o=ckOpenIn();if(o){toast('你上一次 Check In（'+ftime(o.created_at)+'）还没有 Check Out，请先 Check Out');return}}
     if(!custId){toast('请先选择客户，才能打卡');return}
     toast('正在获取 GPS…');
     let pos;
     try{pos=await getPos(12000)}catch(e){toast('GPS 无法取得：'+geoMsg(e));return}
     const {error}=await sb.from('attendance').insert({user_id:me.id,type:type,customer_id:custId,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy});
-    if(error)throw error;
+    if(error){toast(/CHECKOUT_REQUIRED/.test(error.message||'')?'上一次 Check In 还没有 Check Out，请先 Check Out':'出错：'+(error.message||error));return}
     await loadAll();renderCheckin();toast(type==='IN'?'Check In 成功':'Check Out 成功');
   });
 }
